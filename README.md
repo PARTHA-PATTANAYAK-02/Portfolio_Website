@@ -47,7 +47,7 @@ Welcome to my personal developer portfolio — built with **React + Vite** and s
 
 ```bash
 git clone https://github.com/PARTHA-PATTANAYAK-02/Portfolio_Website.git
-cd portfolio_website
+cd Portfolio_Website
 ```
 
 ### 📦 Installation & Setup
