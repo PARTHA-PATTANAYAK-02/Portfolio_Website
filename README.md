@@ -6,7 +6,7 @@ Welcome to my personal developer portfolio — built with **React + Vite** and s
 
 ## 🔗 Live Demo
 
-👉 [Check it out here](https://portfolio-website-neon.vercel.app/)
+👉 [Check it out here](https://partha-portfolio-02.vercel.app/)
 
 ---
 
@@ -78,7 +78,7 @@ npm run dev
 
 ## This project can be deployed easily using:
 
-- ### 🔗 [Vercel](https://portfolio-website-neon.vercel.app/)
+- ### 🔗 [Vercel](https://partha-portfolio-02.vercel.app/)
 
 ## ✍️ Author
 
