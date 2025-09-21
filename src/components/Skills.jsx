@@ -150,26 +150,26 @@ const toolsAndPlatforms = [
       },
     ],
   },
-  {
-    category: "Cloud & DevOps",
-    items: [
-      {
-        name: "AWS",
-        icon: <FaAws className="text-orange-600" />,
-        color: "from-orange-500 to-orange-300",
-      },
-      {
-        name: "Azure",
-        icon: <VscAzure className="text-blue-600" />,
-        color: "from-blue-500 to-blue-300",
-      },
-      {
-        name: "Firebase",
-        icon: <SiFirebase className="text-yellow-500" />,
-        color: "from-yellow-400 to-yellow-200",
-      },
-    ],
-  },
+  // {
+  //   category: "Cloud & DevOps",
+  //   items: [
+  //     {
+  //       name: "AWS",
+  //       icon: <FaAws className="text-orange-600" />,
+  //       color: "from-orange-500 to-orange-300",
+  //     },
+  //     {
+  //       name: "Azure",
+  //       icon: <VscAzure className="text-blue-600" />,
+  //       color: "from-blue-500 to-blue-300",
+  //     },
+  //     {
+  //       name: "Firebase",
+  //       icon: <SiFirebase className="text-yellow-500" />,
+  //       color: "from-yellow-400 to-yellow-200",
+  //     },
+  //   ],
+  // },
   {
     category: "API Tools",
     items: [
@@ -180,21 +180,21 @@ const toolsAndPlatforms = [
       },
     ],
   },
-  {
-    category: "Design",
-    items: [
-      {
-        name: "Figma",
-        icon: <FaFigma className="text-purple-600" />,
-        color: "from-purple-500 to-purple-300",
-      },
-      {
-        name: "Canva",
-        icon: <SiCanva className="text-blue-500" />,
-        color: "from-blue-400 to-blue-200",
-      },
-    ],
-  },
+  // {
+  //   category: "Design",
+  //   items: [
+  //     {
+  //       name: "Figma",
+  //       icon: <FaFigma className="text-purple-600" />,
+  //       color: "from-purple-500 to-purple-300",
+  //     },
+  //     {
+  //       name: "Canva",
+  //       icon: <SiCanva className="text-blue-500" />,
+  //       color: "from-blue-400 to-blue-200",
+  //     },
+  //   ],
+  // },
   {
     category: "Package Managers",
     items: [
@@ -203,43 +203,43 @@ const toolsAndPlatforms = [
         icon: <FaNpm className="text-red-600" />,
         color: "from-red-500 to-red-300",
       },
-      {
-        name: "yarn",
-        icon: <FaYarn className="text-blue-500" />,
-        color: "from-blue-400 to-blue-200",
-      },
+      // {
+      //   name: "yarn",
+      //   icon: <FaYarn className="text-blue-500" />,
+      //   color: "from-blue-400 to-blue-200",
+      // },
     ],
   },
-  {
-    category: "Other Tools",
-    items: [
-      {
-        name: "nodemon",
-        icon: <SiNodemon className="text-green-600" />,
-        color: "from-green-500 to-green-300",
-      },
-      {
-        name: "JWT",
-        icon: <SiJsonwebtokens className="text-purple-600" />,
-        color: "from-purple-500 to-purple-300",
-      },
-      {
-        name: "Socket.io",
-        icon: <SiSocketdotio className="text-black" />,
-        color: "from-gray-500 to-gray-300",
-      },
-      {
-        name: "Docker",
-        icon: <FaDocker className="text-blue-500" />,
-        color: "from-blue-400 to-blue-200",
-      },
-      {
-        name: "Redux",
-        icon: <SiRedux className="text-purple-600" />,
-        color: "from-purple-500 to-purple-300",
-      },
-    ],
-  },
+  // {
+  //   category: "Other Tools",
+  //   items: [
+  //     {
+  //       name: "nodemon",
+  //       icon: <SiNodemon className="text-green-600" />,
+  //       color: "from-green-500 to-green-300",
+  //     },
+  //     {
+  //       name: "JWT",
+  //       icon: <SiJsonwebtokens className="text-purple-600" />,
+  //       color: "from-purple-500 to-purple-300",
+  //     },
+  //     {
+  //       name: "Socket.io",
+  //       icon: <SiSocketdotio className="text-black" />,
+  //       color: "from-gray-500 to-gray-300",
+  //     },
+  //     {
+  //       name: "Docker",
+  //       icon: <FaDocker className="text-blue-500" />,
+  //       color: "from-blue-400 to-blue-200",
+  //     },
+  //     {
+  //       name: "Redux",
+  //       icon: <SiRedux className="text-purple-600" />,
+  //       color: "from-purple-500 to-purple-300",
+  //     },
+  //   ],
+  // },
 ];
 
 const Skills = () => {
@@ -293,7 +293,7 @@ const Skills = () => {
             </span>
           </h2>
           <p className="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto">
-            Technologies I've mastered to create amazing digital experiences
+            Technologies I’ve learned and applied
           </p>
         </motion.div>
 

@@ -46,10 +46,10 @@ const About = () => {
               <span className="font-semibold text-blue-600 dark:text-blue-400">
                 Partha Pattanayak
               </span>
-              , a final-year B.Tech IT student and full-stack developer
-              specializing in creating intuitive digital experiences. My work
-              combines strong technical expertise with a passion for solving
-              real-world problems through code.
+              , a B.Tech IT graduate and full-stack developer focused on
+              creating intuitive digital experiences. My work combines solid
+              technical skills with a passion for solving real-world problems
+              through code.
             </p>
 
             {/* Quote Box - Reintroduced from previous version */}
@@ -66,21 +66,21 @@ const About = () => {
 
             <div className="p-6 bg-white/50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700 backdrop-blur-sm">
               <p className="mb-4">
-                With expertise in both{" "}
+                With strong skills in{" "}
                 <span className="font-semibold text-purple-600 dark:text-purple-400">
-                  MERN stack
+                  Java, JavaScript
                 </span>{" "}
                 and{" "}
                 <span className="font-semibold text-orange-500 dark:text-orange-400">
-                  Java development
+                  modern web technologies
                 </span>
-                , I build solutions that are:
+                , I create applications that are:
               </p>
               <ul className="space-y-3 pl-5 list-disc">
-                <li>Scalable and maintainable</li>
-                <li>User-focused with clean interfaces</li>
-                <li>Performance-optimized</li>
-                <li>Secure by design</li>
+                <li>Well-structured and easy to maintain</li>
+                <li>Focused on clean, intuitive user experiences</li>
+                <li>Optimized for speed and reliability</li>
+                <li>Designed with security and scalability in mind</li>
               </ul>
             </div>
 

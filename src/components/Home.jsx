@@ -14,9 +14,9 @@ const Home = () => {
   const [hoverResume, setHoverResume] = useState(false);
 
   const textLines = [
-    { text: "MERN Stack Developer", emoji: "🚀" },
+    { text: "Java Developer | Frontend Developer", emoji: "🚀" },
     { text: "Java Enthusiast", emoji: "☕" },
-    { text: "Building Web & Software Solutions", emoji: "💻" },
+    { text: "Building Interactive & User-Focused Web Solutions", emoji: "💻" },
   ];
 
   const socialLinks = [
