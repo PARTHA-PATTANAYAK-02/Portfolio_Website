@@ -78,105 +78,20 @@ const Contact = () => {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8">
+        
+
+
+
+
+
+
+        
+        <div className="grid md:grid-cols-1 gap-8">
           {/* Form Card */}
-          <motion.div className="relative" whileHover={{ y: -5 }}>
-            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-cyan-500 rounded-2xl shadow-xl opacity-20 blur-md -z-10"></div>
-            <form
-              ref={form}
-              onSubmit={handleSubmit}
-              className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg p-8 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-lg space-y-6"
-            >
-              {/* Status Messages */}
-              {status.success && (
-                <motion.div
-                  initial={{ opacity: 0, y: -20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="p-3 bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 rounded-lg flex items-center gap-2"
-                >
-                  <FaCheck className="text-green-500" />
-                  Message sent successfully! I'll get back to you soon.
-                </motion.div>
-              )}
 
-              {status.error && (
-                <motion.div
-                  initial={{ opacity: 0, y: -20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="p-3 bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200 rounded-lg flex items-center gap-2"
-                >
-                  Something went wrong. Please try again or email me directly.
-                </motion.div>
-              )}
 
-              <motion.div whileHover={{ scale: 1.01 }}>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  placeholder="Your Name"
-                  required
-                  className="w-full p-4 rounded-xl bg-white dark:bg-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                />
-              </motion.div>
-
-              <motion.div whileHover={{ scale: 1.01 }}>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="Your Email"
-                  required
-                  className="w-full p-4 rounded-xl bg-white dark:bg-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                />
-              </motion.div>
-
-              <motion.div whileHover={{ scale: 1.01 }}>
-                <textarea
-                  name="message"
-                  value={formData.message}
-                  onChange={handleChange}
-                  placeholder="Your Message"
-                  rows="5"
-                  required
-                  className="w-full p-4 rounded-xl bg-white dark:bg-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                ></textarea>
-              </motion.div>
-
-              <motion.button
-                type="submit"
-                disabled={status.submitting}
-                className={`w-full flex items-center justify-center gap-3 ${
-                  status.submitting
-                    ? "bg-gray-400 dark:bg-gray-600"
-                    : "bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-700 hover:to-cyan-700"
-                } text-white py-4 px-8 rounded-xl font-medium transition-all shadow-lg hover:shadow-indigo-500/30 cursor-pointer`}
-                whileHover={!status.submitting ? { y: -3, scale: 1.02 } : {}}
-                whileTap={!status.submitting ? { scale: 0.98 } : {}}
-                onHoverStart={() => !status.submitting && setIsHovered(true)}
-                onHoverEnd={() => !status.submitting && setIsHovered(false)}
-              >
-                {status.submitting ? (
-                  <>
-                    <FaSpinner className="animate-spin" />
-                    <span>Sending...</span>
-                  </>
-                ) : (
-                  <>
-                    <motion.div
-                      animate={{ x: isHovered ? [0, 5, -5, 0] : 0 }}
-                      transition={{ duration: 0.6 }}
-                    >
-                      <FaPaperPlane />
-                    </motion.div>
-                    <span>Send Message</span>
-                  </>
-                )}
-              </motion.button>
-            </form>
-          </motion.div>
+          
+          {/* /// send card */}
 
           {/* Info Card */}
           <motion.div
@@ -212,6 +127,14 @@ const Contact = () => {
                 />
               ))}
             </div>
+
+            
+
+
+
+
+
+
 
             {/* Content Card */}
             <div className="h-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg p-8 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-lg flex flex-col justify-between relative overflow-hidden">
