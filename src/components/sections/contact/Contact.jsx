@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   motion as Motion,
@@ -27,7 +27,6 @@ import { LinkedinIcon, GithubIcon, LeetCodeIcon } from "../../ui/BrandIcons";
 
 /* =========================================================
    SOCIAL ICONS — Facebook / Instagram / X
-   No extra package required
 ========================================================= */
 
 function FacebookIcon({ className = "" }) {
@@ -54,9 +53,7 @@ function InstagramIcon({ className = "" }) {
       aria-hidden="true"
     >
       <rect x="3.2" y="3.2" width="17.6" height="17.6" rx="5" />
-
       <circle cx="12" cy="12" r="4" />
-
       <circle cx="17.4" cy="6.7" r="1" fill="currentColor" stroke="none" />
     </svg>
   );
@@ -77,7 +74,6 @@ function XIcon({ className = "" }) {
 
 /* =========================================================
    SOCIAL LINKS
-   👉 Later only change the href values
 ========================================================= */
 
 const SOCIALS = [
@@ -164,7 +160,6 @@ function TiltCard({ children, className = "", intensity = 6 }) {
     const rect = ref.current.getBoundingClientRect();
 
     mouseX.set((e.clientX - rect.left) / rect.width);
-
     mouseY.set((e.clientY - rect.top) / rect.height);
   };
 
@@ -324,6 +319,54 @@ export default function Contact() {
   const [copied, setCopied] = useState(false);
 
   /* =======================================================
+     COOLDOWN
+     
+     User can send only once every 60 seconds.
+     Timestamp is stored in localStorage so reload won't
+     reset the timer.
+  ======================================================= */
+
+  const COOLDOWN_SECONDS = 60;
+
+  const COOLDOWN_KEY = "portfolio_contact_last_sent";
+
+  const [cooldown, setCooldown] = useState(0);
+
+  /* =======================================================
+     RESTORE COOLDOWN AFTER PAGE LOAD / REFRESH
+  ======================================================= */
+
+  useEffect(() => {
+    const updateCooldown = () => {
+      const lastSent = localStorage.getItem(COOLDOWN_KEY);
+
+      if (!lastSent) {
+        setCooldown(0);
+        return;
+      }
+
+      const elapsed = Math.floor((Date.now() - Number(lastSent)) / 1000);
+
+      const remaining = COOLDOWN_SECONDS - elapsed;
+
+      if (remaining > 0) {
+        setCooldown(remaining);
+      } else {
+        setCooldown(0);
+        localStorage.removeItem(COOLDOWN_KEY);
+      }
+    };
+
+    // Check immediately when component loads
+    updateCooldown();
+
+    // Update every second
+    const interval = setInterval(updateCooldown, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  /* =======================================================
      INPUT
   ======================================================= */
 
@@ -361,6 +404,22 @@ export default function Contact() {
   const handleSubmit = (e) => {
     e.preventDefault();
 
+    /* -----------------------------------------------
+       STOP SUBMISSION IF COOLDOWN IS ACTIVE
+    ----------------------------------------------- */
+
+    if (cooldown > 0) {
+      return;
+    }
+
+    /* -----------------------------------------------
+       PREVENT DOUBLE CLICK WHILE SUBMITTING
+    ----------------------------------------------- */
+
+    if (status === "submitting") {
+      return;
+    }
+
     setStatus("submitting");
 
     const serviceId = import.meta.env.VITE_SERVICE_ID;
@@ -371,6 +430,10 @@ export default function Contact() {
 
     emailjs.sendForm(serviceId, templateId, formRef.current, publicKey).then(
       () => {
+        /* -----------------------------------------
+             EMAIL SENT SUCCESSFULLY
+          ----------------------------------------- */
+
         setStatus("success");
 
         setFormData({
@@ -379,12 +442,34 @@ export default function Contact() {
           message: "",
         });
 
+        /* -----------------------------------------
+             START 60 SECOND COOLDOWN
+
+             IMPORTANT:
+             We store the exact timestamp, not
+             simply "60", so page reload will still
+             know how much time remains.
+          ----------------------------------------- */
+
+        const now = Date.now();
+
+        localStorage.setItem(COOLDOWN_KEY, String(now));
+
+        setCooldown(COOLDOWN_SECONDS);
+
         setTimeout(() => {
           setStatus("idle");
         }, 4500);
       },
 
       (error) => {
+        /* -----------------------------------------
+             EMAIL FAILED
+
+             Cooldown DOES NOT start if EmailJS
+             fails.
+          ----------------------------------------- */
+
         console.error("EmailJS error:", error?.text || error);
 
         setStatus("error");
@@ -498,13 +583,10 @@ export default function Contact() {
               border
               border-emerald-500/30
               bg-emerald-500/10
-              px-3.5
-              py-2
-              font-mono
-              text-[10px]
-              font-semibold
-              uppercase
-              tracking-widest
+              px-3
+              py-1.5
+              text-xs
+              font-medium
               text-emerald-600
               dark:text-emerald-400
             "
@@ -545,1237 +627,624 @@ export default function Contact() {
         <div
           className="
             grid
-            grid-cols-1
-            items-stretch
-            gap-5
-            lg:grid-cols-12
+            gap-6
+            lg:grid-cols-[0.85fr_1.15fr]
           "
         >
           {/* =================================================
-              LEFT SIDE
+              LEFT CARD
           ================================================= */}
 
-          <Motion.div
-            initial={{
-              opacity: 0,
-              x: -25,
-            }}
-            whileInView={{
-              opacity: 1,
-              x: 0,
-            }}
-            viewport={{
-              once: true,
-            }}
-            transition={{
-              duration: 0.6,
-            }}
-            className="
-              flex
-              h-full
-              flex-col
-              gap-4
-              lg:col-span-5
-            "
-          >
-            {/* =================================================
-                EMAIL
-            ================================================= */}
+          <TiltCard intensity={5} className="h-full">
+            <div
+              className="
+                group
+                relative
+                h-full
+                overflow-hidden
+                rounded-3xl
+                border
+                border-slate-200
+                bg-white/70
+                p-6
+                shadow-xl
+                shadow-slate-900/5
+                backdrop-blur-xl
+                dark:border-white/10
+                dark:bg-white/[0.035]
+                dark:shadow-black/20
+                sm:p-8
+              "
+            >
+              <CardGlow />
 
-            <TiltCard intensity={6}>
-              <div
-                className="
-                  group
-                  relative
-                  overflow-hidden
-                  rounded-3xl
-                  border
-                  border-slate-200
-                  bg-white/80
-                  p-5
-                  shadow-xl
-                  shadow-slate-900/[0.06]
-                  backdrop-blur-xl
-                  transition-all
-                  duration-500
-                  hover:border-primary/40
-                  hover:shadow-2xl
-                  hover:shadow-primary/10
-
-                  dark:border-slate-800/80
-                  dark:bg-slate-950/65
-                  dark:shadow-black/20
-                "
-              >
-                <CardGlow />
-
+              <div className="relative z-10">
                 <div
                   className="
-                    relative
-                    z-10
+                    mb-6
                     flex
+                    h-12
+                    w-12
                     items-center
-                    gap-4
+                    justify-center
+                    rounded-2xl
+                    border
+                    border-primary/20
+                    bg-primary/10
+                    text-primary
                   "
                 >
-                  <div
-                    className="
-                      flex
-                      h-12
-                      w-12
-                      shrink-0
-                      items-center
-                      justify-center
-                      rounded-2xl
-                      border
-                      border-primary/20
-                      bg-primary/10
-                      shadow-lg
-                      shadow-primary/10
-                      transition-all
-                      duration-500
-                      group-hover:rotate-3
-                      group-hover:scale-110
-                    "
-                  >
-                    <Mail className="h-5 w-5 text-primary" />
-                  </div>
+                  <Mail className="h-5 w-5" />
+                </div>
 
-                  <div className="min-w-0 flex-1">
+                <h3
+                  className="
+                    text-xl
+                    font-bold
+                    text-slate-950
+                    dark:text-white
+                  "
+                >
+                  Let's build something
+                </h3>
+
+                <p
+                  className="
+                    mt-3
+                    text-sm
+                    leading-6
+                    text-slate-600
+                    dark:text-slate-400
+                  "
+                >
+                  I'm always open to discussing new projects, opportunities,
+                  collaborations, and interesting ideas.
+                </p>
+
+                {/* EMAIL */}
+
+                <button
+                  type="button"
+                  onClick={handleCopyEmail}
+                  className="
+                    mt-7
+                    flex
+                    w-full
+                    items-center
+                    justify-between
+                    rounded-2xl
+                    border
+                    border-slate-200
+                    bg-slate-50
+                    px-4
+                    py-3
+                    text-left
+                    transition-all
+                    hover:border-primary/30
+                    hover:bg-primary/5
+                    dark:border-white/10
+                    dark:bg-white/[0.025]
+                    dark:hover:bg-white/[0.05]
+                  "
+                >
+                  <div>
                     <p
                       className="
-                        font-mono
-                        text-[9px]
+                        text-[10px]
                         font-semibold
                         uppercase
-                        tracking-[0.2em]
-                        text-slate-500
-                        dark:text-slate-400
+                        tracking-[0.18em]
+                        text-slate-400
                       "
                     >
                       Email
                     </p>
 
-                    <a
-                      href="mailto:pattanayakp2002@gmail.com"
+                    <p
                       className="
                         mt-1
-                        block
-                        truncate
+                        break-all
                         text-sm
-                        font-bold
-                        text-slate-950
-                        transition-colors
-                        hover:text-primary
-                        dark:text-white
-                        sm:text-base
+                        font-medium
+                        text-slate-800
+                        dark:text-slate-200
                       "
                     >
                       pattanayakp2002@gmail.com
-                    </a>
+                    </p>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={handleCopyEmail}
-                    aria-label="Copy email"
-                    className="
-                      flex
-                      h-9
-                      w-9
-                      shrink-0
-                      items-center
-                      justify-center
-                      rounded-xl
-                      border
-                      border-slate-200
-                      bg-slate-50
-                      text-slate-500
-                      transition-all
-                      duration-300
-                      hover:-translate-y-0.5
-                      hover:border-primary/40
-                      hover:bg-primary/10
-                      hover:text-primary
-
-                      dark:border-slate-700
-                      dark:bg-slate-900
-                      dark:text-slate-400
-                    "
-                  >
+                  <AnimatePresence mode="wait">
                     {copied ? (
-                      <Check className="h-4 w-4 text-emerald-500" />
+                      <Motion.div
+                        key="copied"
+                        initial={{
+                          opacity: 0,
+                          scale: 0.7,
+                        }}
+                        animate={{
+                          opacity: 1,
+                          scale: 1,
+                        }}
+                        exit={{
+                          opacity: 0,
+                          scale: 0.7,
+                        }}
+                        className="text-emerald-500"
+                      >
+                        <Check className="h-4 w-4" />
+                      </Motion.div>
                     ) : (
-                      <Copy className="h-4 w-4" />
+                      <Motion.div
+                        key="copy"
+                        initial={{
+                          opacity: 0,
+                          scale: 0.7,
+                        }}
+                        animate={{
+                          opacity: 1,
+                          scale: 1,
+                        }}
+                        exit={{
+                          opacity: 0,
+                          scale: 0.7,
+                        }}
+                        className="
+                          text-slate-400
+                          transition-colors
+                          group-hover:text-primary
+                        "
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Motion.div>
                     )}
-                  </button>
-                </div>
+                  </AnimatePresence>
+                </button>
 
-                {copied && (
-                  <Motion.p
-                    initial={{
-                      opacity: 0,
-                      y: 4,
-                    }}
-                    animate={{
-                      opacity: 1,
-                      y: 0,
-                    }}
-                    className="
-                      relative
-                      z-10
-                      mt-3
-                      pl-16
-                      font-mono
-                      text-[9px]
-                      font-medium
-                      text-emerald-600
-                      dark:text-emerald-400
-                    "
-                  >
-                    Copied to clipboard
-                  </Motion.p>
-                )}
-              </div>
-            </TiltCard>
+                {/* SOCIALS */}
 
-            {/* =================================================
-                LET'S CONNECT
-            ================================================= */}
-
-            <TiltCard intensity={7} className="flex-1">
-              <div
-                className="
-                  group
-                  relative
-                  flex
-                  h-full
-                  flex-col
-                  overflow-hidden
-                  rounded-3xl
-                  border
-                  border-slate-200
-                  bg-white/80
-                  p-5
-                  shadow-xl
-                  shadow-slate-900/[0.06]
-                  backdrop-blur-xl
-                  transition-all
-                  duration-500
-                  hover:border-primary/40
-                  hover:shadow-2xl
-                  hover:shadow-primary/10
-
-                  dark:border-slate-800/80
-                  dark:bg-slate-950/65
-                  dark:shadow-black/20
-
-                  sm:p-6
-                "
-              >
-                <CardGlow />
-
-                <div
-                  className="
-                    relative
-                    z-10
-                    flex
-                    h-full
-                    flex-col
-                  "
-                >
-                  {/* HEADER */}
-
-                  <div
-                    className="
-                      flex
-                      items-start
-                      justify-between
-                    "
-                  >
-                    <div>
-                      <p
-                        className="
-                          font-mono
-                          text-[9px]
-                          font-semibold
-                          uppercase
-                          tracking-[0.2em]
-                          text-slate-500
-                          dark:text-slate-400
-                        "
-                      >
-                        Find me online
-                      </p>
-
-                      <h3
-                        className="
-                          mt-1
-                          text-xl
-                          font-bold
-                          tracking-tight
-                          text-slate-950
-                          dark:text-white
-                        "
-                      >
-                        Let's connect
-                      </h3>
-                    </div>
-
-                    <ArrowUpRight
-                      className="
-                        h-5
-                        w-5
-                        text-slate-400
-                        transition-all
-                        duration-300
-                        group-hover:-translate-y-1
-                        group-hover:translate-x-1
-                        group-hover:text-primary
-                      "
-                    />
-                  </div>
-
+                <div className="mt-7">
                   <p
                     className="
-                      mt-3
-                      max-w-md
-                      text-xs
-                      font-medium
-                      leading-5
-                      text-slate-600
-                      dark:text-slate-400
+                      mb-3
+                      text-[10px]
+                      font-semibold
+                      uppercase
+                      tracking-[0.18em]
+                      text-slate-400
                     "
                   >
-                    Follow my work, coding journey, and professional updates
-                    across the platforms below.
+                    Find me online
                   </p>
 
-                  {/* =================================================
-                      SOCIAL GRID — 6 CARDS
-                  ================================================= */}
-
-                  <div
-                    className="
-                      mt-5
-                      grid
-                      grid-cols-2
-                      gap-3
-                      sm:grid-cols-3
-                    "
-                  >
+                  <div className="flex flex-wrap gap-2">
                     {SOCIALS.map((social) => {
                       const Icon = social.icon;
 
                       return (
-                        <Motion.a
+                        <a
                           key={social.label}
                           href={social.href}
                           target="_blank"
-                          rel="noopener noreferrer"
+                          rel="noreferrer"
                           aria-label={social.label}
-                          whileHover={{
-                            y: -6,
-                            scale: 1.025,
-                          }}
-                          whileTap={{
-                            scale: 0.97,
-                          }}
                           className="
                             group/social
                             relative
-                            overflow-hidden
-                            rounded-2xl
+                            flex
+                            h-10
+                            w-10
+                            items-center
+                            justify-center
+                            rounded-xl
                             border
                             border-slate-200
-                            bg-slate-50/80
-                            px-3
-                            py-4
-                            text-center
-                            shadow-sm
+                            bg-white
                             transition-all
                             duration-300
-                            hover:border-primary/30
-                            hover:bg-white
-                            hover:shadow-xl
-                            hover:shadow-primary/10
-
-                            dark:border-slate-800
-                            dark:bg-slate-900/60
-                            dark:hover:bg-slate-900
+                            hover:-translate-y-1
+                            hover:scale-105
+                            hover:border-transparent
+                            dark:border-white/10
+                            dark:bg-white/[0.035]
                           "
+                          style={{
+                            "--social-glow": social.glow,
+                          }}
                         >
-                          {/* Glow */}
-
-                          <div
-                            aria-hidden
-                            className="
-                              absolute
-                              inset-0
-                              opacity-0
-                              transition-opacity
+                          <Icon
+                            className={`
+                              h-4
+                              w-4
+                              transition-transform
                               duration-300
-                              group-hover/social:opacity-100
-                            "
-                            style={{
-                              background: `radial-gradient(
-                                circle at 50% 0%,
-                                ${social.glow},
-                                transparent 68%
-                              )`,
-                            }}
+                              group-hover/social:scale-110
+                              ${social.accent}
+                            `}
                           />
-
-                          {/* Shine */}
-
-                          <div
-                            aria-hidden
-                            className="
-                              absolute
-                              -left-10
-                              top-0
-                              h-full
-                              w-8
-                              rotate-[20deg]
-                              bg-white/30
-                              opacity-0
-                              blur-sm
-                              transition-all
-                              duration-500
-                              group-hover/social:left-[120%]
-                              group-hover/social:opacity-100
-                            "
-                          />
-
-                          <div
-                            className="
-                              relative
-                              z-10
-                            "
-                          >
-                            <div
-                              className="
-                                mx-auto
-                                flex
-                                h-10
-                                w-10
-                                items-center
-                                justify-center
-                                rounded-xl
-                                border
-                                border-slate-200
-                                bg-white
-                                shadow-sm
-                                transition-all
-                                duration-300
-                                group-hover/social:scale-110
-                                group-hover/social:rotate-3
-
-                                dark:border-slate-700
-                                dark:bg-slate-950
-                              "
-                            >
-                              <Icon
-                                className={`
-                                  h-5
-                                  w-5
-                                  ${social.accent}
-                                  transition-transform
-                                  duration-300
-                                  group-hover/social:scale-110
-                                `}
-                              />
-                            </div>
-
-                            <span
-                              className="
-                                mt-2.5
-                                block
-                                text-[10px]
-                                font-bold
-                                text-slate-700
-                                transition-colors
-                                group-hover/social:text-slate-950
-
-                                dark:text-slate-400
-                                dark:group-hover/social:text-white
-                              "
-                            >
-                              {social.label}
-                            </span>
-
-                            <span
-                              className="
-                                mt-1
-                                block
-                                font-mono
-                                text-[8px]
-                                uppercase
-                                tracking-wider
-                                text-slate-400
-                                opacity-0
-                                transition-all
-                                duration-300
-                                group-hover/social:opacity-100
-                                dark:text-slate-600
-                              "
-                            >
-                              Visit
-                            </span>
-                          </div>
-                        </Motion.a>
+                        </a>
                       );
                     })}
                   </div>
-
-                  {/* SMALL FOOTER */}
-
-                  <div
-                    className="
-                      mt-auto
-                      flex
-                      items-center
-                      gap-3
-                      pt-5
-                    "
-                  >
-                    <span
-                      className="
-                        h-px
-                        flex-1
-                        bg-slate-200
-                        dark:bg-slate-800
-                      "
-                    />
-
-                    <span
-                      className="
-                        whitespace-nowrap
-                        font-mono
-                        text-[8px]
-                        font-semibold
-                        uppercase
-                        tracking-[0.18em]
-                        text-slate-400
-                        dark:text-slate-500
-                      "
-                    >
-                      Let's build something
-                    </span>
-
-                    <span
-                      className="
-                        h-px
-                        flex-1
-                        bg-slate-200
-                        dark:bg-slate-800
-                      "
-                    />
-                  </div>
                 </div>
               </div>
-            </TiltCard>
+            </div>
+          </TiltCard>
 
-            {/* =================================================
-                RESUME
-            ================================================= */}
+          {/* =================================================
+              CONTACT FORM
+          ================================================= */}
 
-            <Motion.a
-              href="/Partha_Resume.pdf"
-              download
-              whileHover={{
-                y: -4,
-                scale: 1.01,
-              }}
-              whileTap={{
-                scale: 0.98,
-              }}
+          <TiltCard intensity={4} className="h-full">
+            <div
               className="
-                group
                 relative
+                h-full
                 overflow-hidden
                 rounded-3xl
                 border
-                border-primary/30
-                bg-gradient-to-r
-                from-primary
-                to-fuchsia-500
-                p-5
-                text-white
+                border-slate-200
+                bg-white/80
+                p-6
                 shadow-xl
-                shadow-primary/20
-                transition-all
-                duration-500
-                hover:shadow-2xl
-                hover:shadow-primary/40
+                shadow-slate-900/5
+                backdrop-blur-xl
+                dark:border-white/10
+                dark:bg-white/[0.035]
+                dark:shadow-black/20
+                sm:p-8
               "
             >
-              <Motion.div
-                animate={{
-                  x: ["-120%", "220%"],
-                }}
-                transition={{
-                  duration: 3,
-                  repeat: Infinity,
-                  repeatDelay: 2,
-                  ease: "easeInOut",
-                }}
-                className="
-                  pointer-events-none
-                  absolute
-                  top-0
-                  h-full
-                  w-16
-                  rotate-[20deg]
-                  bg-white/20
-                  blur-md
-                "
-              />
-
-              <div
-                className="
-                  relative
-                  z-10
-                  flex
-                  items-center
-                  justify-between
-                  gap-4
-                "
-              >
-                <div className="flex items-center gap-3">
-                  <div
+              <div className="relative z-10">
+                <div className="mb-7">
+                  <p
                     className="
-                      flex
-                      h-11
-                      w-11
-                      items-center
-                      justify-center
-                      rounded-2xl
-                      border
-                      border-white/20
-                      bg-white/10
-                      backdrop-blur-md
-                      transition-all
-                      duration-300
-                      group-hover:rotate-3
-                      group-hover:scale-110
+                      text-xs
+                      font-semibold
+                      uppercase
+                      tracking-[0.18em]
+                      text-primary
                     "
                   >
-                    <Download className="h-5 w-5" />
-                  </div>
+                    Send a message
+                  </p>
 
-                  <div>
-                    <p
-                      className="
-                        font-mono
-                        text-[9px]
-                        font-medium
-                        uppercase
-                        tracking-[0.2em]
-                        text-white/70
-                      "
-                    >
-                      Want to know more?
-                    </p>
-
-                    <p
-                      className="
-                        mt-0.5
-                        text-sm
-                        font-bold
-                      "
-                    >
-                      Download my resume
-                    </p>
-                  </div>
+                  <h3
+                    className="
+                      mt-2
+                      text-2xl
+                      font-bold
+                      text-slate-950
+                      dark:text-white
+                    "
+                  >
+                    Start a conversation
+                  </h3>
                 </div>
 
-                <ArrowUpRight
-                  className="
-                    h-5
-                    w-5
-                    transition-all
-                    duration-300
-                    group-hover:-translate-y-1
-                    group-hover:translate-x-1
-                  "
-                />
-              </div>
-            </Motion.a>
-          </Motion.div>
-
-          {/* =================================================
-              RIGHT — FORM
-          ================================================= */}
-
-          <Motion.div
-            initial={{
-              opacity: 0,
-              x: 25,
-            }}
-            whileInView={{
-              opacity: 1,
-              x: 0,
-            }}
-            viewport={{
-              once: true,
-            }}
-            transition={{
-              duration: 0.6,
-              delay: 0.1,
-            }}
-            className="
-              flex
-              h-full
-              lg:col-span-7
-            "
-          >
-            <TiltCard intensity={3} className="h-full w-full">
-              <div
-                className="
-                  group
-                  relative
-                  flex
-                  h-full
-                  flex-col
-                  overflow-hidden
-                  rounded-3xl
-                  border
-                  border-slate-200
-                  bg-white/80
-                  p-5
-                  shadow-2xl
-                  shadow-slate-900/[0.07]
-                  backdrop-blur-2xl
-
-                  dark:border-slate-800/80
-                  dark:bg-slate-950/65
-                  dark:shadow-black/25
-
-                  sm:p-6
-                  lg:p-7
-                "
-              >
-                <div
-                  aria-hidden
-                  className="
-                    pointer-events-none
-                    absolute
-                    -right-24
-                    -top-24
-                    h-64
-                    w-64
-                    rounded-full
-                    bg-primary/[0.07]
-                    blur-[90px]
-                    transition-all
-                    duration-700
-                    group-hover:bg-primary/[0.12]
-                  "
-                />
-
-                <div
-                  aria-hidden
-                  className="
-                    pointer-events-none
-                    absolute
-                    -bottom-32
-                    -left-32
-                    h-64
-                    w-64
-                    rounded-full
-                    bg-cyan-500/[0.05]
-                    blur-[100px]
-                  "
-                />
-
-                <div
-                  className="
-                    relative
-                    z-10
-                    flex
-                    h-full
-                    flex-col
-                  "
+                <form
+                  ref={formRef}
+                  onSubmit={handleSubmit}
+                  className="space-y-5"
                 >
-                  {/* FORM HEADER */}
+                  {/* NAME */}
 
-                  <div
-                    className="
-                      mb-6
-                      flex
-                      items-center
-                      justify-between
-                    "
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="
-                          flex
-                          h-11
-                          w-11
-                          items-center
-                          justify-center
-                          rounded-2xl
-                          border
-                          border-primary/20
-                          bg-primary/10
-                          shadow-lg
-                          shadow-primary/10
-                          transition-all
-                          duration-500
-                          group-hover:rotate-3
-                          group-hover:scale-105
-                        "
-                      >
-                        <Send className="h-5 w-5 text-primary" />
-                      </div>
-
-                      <div>
-                        <p
-                          className="
-                            font-mono
-                            text-[9px]
-                            font-semibold
-                            uppercase
-                            tracking-[0.2em]
-                            text-slate-500
-                            dark:text-slate-400
-                          "
-                        >
-                          Contact form
-                        </p>
-
-                        <h3
-                          className="
-                            mt-0.5
-                            text-lg
-                            font-bold
-                            tracking-tight
-                            text-slate-950
-                            dark:text-white
-                          "
-                        >
-                          Send a message
-                        </h3>
-                      </div>
-                    </div>
-
-                    <div
+                  <div>
+                    <label
+                      htmlFor="name"
                       className="
-                        hidden
-                        items-center
-                        gap-2
-                        rounded-full
-                        border
-                        border-emerald-500/30
-                        bg-emerald-500/10
-                        px-3
-                        py-1.5
-                        font-mono
-                        text-[9px]
+                        mb-2
+                        block
+                        text-xs
                         font-semibold
-                        uppercase
-                        tracking-widest
-                        text-emerald-600
-                        dark:text-emerald-400
-                        sm:flex
+                        text-slate-600
+                        dark:text-slate-400
                       "
                     >
-                      <span
-                        className="
-                          h-1.5
-                          w-1.5
-                          animate-pulse
-                          rounded-full
-                          bg-emerald-500
-                        "
-                      />
-                      Secure
-                    </div>
+                      Name
+                    </label>
+
+                    <input
+                      id="name"
+                      type="text"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      placeholder="Your name"
+                      required
+                      disabled={status === "submitting"}
+                      className="
+                        w-full
+                        rounded-2xl
+                        border
+                        border-slate-200
+                        bg-slate-50
+                        px-4
+                        py-3
+                        text-sm
+                        text-slate-900
+                        outline-none
+                        transition-all
+                        placeholder:text-slate-400
+                        focus:border-primary/50
+                        focus:ring-4
+                        focus:ring-primary/10
+                        disabled:cursor-not-allowed
+                        disabled:opacity-60
+                        dark:border-white/10
+                        dark:bg-white/[0.025]
+                        dark:text-white
+                      "
+                    />
                   </div>
 
-                  {/* FORM */}
+                  {/* EMAIL */}
 
-                  <form
-                    ref={formRef}
-                    onSubmit={handleSubmit}
-                    className="
-                      flex
-                      flex-1
-                      flex-col
-                      gap-4
-                    "
-                  >
-                    {/* NAME */}
+                  <div>
+                    <label
+                      htmlFor="email"
+                      className="
+                        mb-2
+                        block
+                        text-xs
+                        font-semibold
+                        text-slate-600
+                        dark:text-slate-400
+                      "
+                    >
+                      Email
+                    </label>
 
-                    <div>
-                      <label
-                        htmlFor="name"
+                    <input
+                      id="email"
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      placeholder="you@example.com"
+                      required
+                      disabled={status === "submitting"}
+                      className="
+                        w-full
+                        rounded-2xl
+                        border
+                        border-slate-200
+                        bg-slate-50
+                        px-4
+                        py-3
+                        text-sm
+                        text-slate-900
+                        outline-none
+                        transition-all
+                        placeholder:text-slate-400
+                        focus:border-primary/50
+                        focus:ring-4
+                        focus:ring-primary/10
+                        disabled:cursor-not-allowed
+                        disabled:opacity-60
+                        dark:border-white/10
+                        dark:bg-white/[0.025]
+                        dark:text-white
+                      "
+                    />
+                  </div>
+
+                  {/* MESSAGE */}
+
+                  <div>
+                    <label
+                      htmlFor="message"
+                      className="
+                        mb-2
+                        block
+                        text-xs
+                        font-semibold
+                        text-slate-600
+                        dark:text-slate-400
+                      "
+                    >
+                      Message
+                    </label>
+
+                    <textarea
+                      id="message"
+                      name="message"
+                      value={formData.message}
+                      onChange={handleChange}
+                      placeholder="Tell me about your project..."
+                      required
+                      rows={6}
+                      disabled={status === "submitting"}
+                      className="
+                        w-full
+                        resize-none
+                        rounded-2xl
+                        border
+                        border-slate-200
+                        bg-slate-50
+                        px-4
+                        py-3
+                        text-sm
+                        text-slate-900
+                        outline-none
+                        transition-all
+                        placeholder:text-slate-400
+                        focus:border-primary/50
+                        focus:ring-4
+                        focus:ring-primary/10
+                        disabled:cursor-not-allowed
+                        disabled:opacity-60
+                        dark:border-white/10
+                        dark:bg-white/[0.025]
+                        dark:text-white
+                      "
+                    />
+                  </div>
+
+                  {/* STATUS */}
+
+                  <AnimatePresence mode="wait">
+                    {status === "success" && (
+                      <Motion.div
+                        initial={{
+                          opacity: 0,
+                          y: -8,
+                        }}
+                        animate={{
+                          opacity: 1,
+                          y: 0,
+                        }}
+                        exit={{
+                          opacity: 0,
+                          y: -8,
+                        }}
                         className="
-                          mb-2
-                          block
-                          font-mono
-                          text-[10px]
-                          font-semibold
-                          uppercase
-                          tracking-widest
-                          text-slate-600
-                          dark:text-slate-400
-                        "
-                      >
-                        Your name
-                      </label>
-
-                      <input
-                        id="name"
-                        type="text"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleChange}
-                        required
-                        autoComplete="name"
-                        placeholder="John Doe"
-                        className="
-                          w-full
-                          rounded-2xl
-                          border
-                          border-slate-200
-                          bg-slate-50/70
-                          px-4
-                          py-3.5
-                          text-sm
-                          font-medium
-                          text-slate-950
-                          outline-none
-                          placeholder:text-slate-400
-                          transition-all
-                          duration-300
-                          hover:border-slate-300
-                          focus:border-primary/60
-                          focus:bg-white
-                          focus:shadow-[0_0_0_4px_hsl(262_83%_58%_/_0.10)]
-
-                          dark:border-slate-800
-                          dark:bg-slate-900/60
-                          dark:text-white
-                          dark:placeholder:text-slate-600
-                          dark:hover:border-slate-700
-                          dark:focus:bg-slate-900
-                        "
-                      />
-                    </div>
-
-                    {/* EMAIL */}
-
-                    <div>
-                      <label
-                        htmlFor="email"
-                        className="
-                          mb-2
-                          block
-                          font-mono
-                          text-[10px]
-                          font-semibold
-                          uppercase
-                          tracking-widest
-                          text-slate-600
-                          dark:text-slate-400
-                        "
-                      >
-                        Your email
-                      </label>
-
-                      <input
-                        id="email"
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        required
-                        autoComplete="email"
-                        placeholder="john@example.com"
-                        className="
-                          w-full
-                          rounded-2xl
-                          border
-                          border-slate-200
-                          bg-slate-50/70
-                          px-4
-                          py-3.5
-                          text-sm
-                          font-medium
-                          text-slate-950
-                          outline-none
-                          placeholder:text-slate-400
-                          transition-all
-                          duration-300
-                          hover:border-slate-300
-                          focus:border-primary/60
-                          focus:bg-white
-                          focus:shadow-[0_0_0_4px_hsl(262_83%_58%_/_0.10)]
-
-                          dark:border-slate-800
-                          dark:bg-slate-900/60
-                          dark:text-white
-                          dark:placeholder:text-slate-600
-                          dark:hover:border-slate-700
-                          dark:focus:bg-slate-900
-                        "
-                      />
-                    </div>
-
-                    {/* MESSAGE */}
-
-                    <div className="flex flex-1 flex-col">
-                      <div
-                        className="
-                          mb-2
                           flex
                           items-center
-                          justify-between
-                        "
-                      >
-                        <label
-                          htmlFor="message"
-                          className="
-                            font-mono
-                            text-[10px]
-                            font-semibold
-                            uppercase
-                            tracking-widest
-                            text-slate-600
-                            dark:text-slate-400
-                          "
-                        >
-                          Message
-                        </label>
-
-                        <span
-                          className="
-                            font-mono
-                            text-[9px]
-                            font-medium
-                            text-slate-400
-                            dark:text-slate-600
-                          "
-                        >
-                          {formData.message.length}/500
-                        </span>
-                      </div>
-
-                      <textarea
-                        id="message"
-                        name="message"
-                        value={formData.message}
-                        onChange={handleChange}
-                        required
-                        maxLength={500}
-                        placeholder="Tell me about your project or opportunity..."
-                        className="
-                          min-h-[180px]
-                          w-full
-                          flex-1
-                          resize-none
+                          gap-2
                           rounded-2xl
                           border
-                          border-slate-200
-                          bg-slate-50/70
+                          border-emerald-500/20
+                          bg-emerald-500/10
                           px-4
-                          py-3.5
+                          py-3
                           text-sm
-                          font-medium
-                          leading-6
-                          text-slate-950
-                          outline-none
-                          placeholder:text-slate-400
-                          transition-all
-                          duration-300
-                          hover:border-slate-300
-                          focus:border-primary/60
-                          focus:bg-white
-                          focus:shadow-[0_0_0_4px_hsl(262_83%_58%_/_0.10)]
-
-                          dark:border-slate-800
-                          dark:bg-slate-900/60
-                          dark:text-white
-                          dark:placeholder:text-slate-600
-                          dark:hover:border-slate-700
-                          dark:focus:bg-slate-900
+                          text-emerald-600
+                          dark:text-emerald-400
                         "
-                      />
-                    </div>
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                        Message sent successfully!
+                      </Motion.div>
+                    )}
 
-                    {/* SEND */}
+                    {status === "error" && (
+                      <Motion.div
+                        initial={{
+                          opacity: 0,
+                          y: -8,
+                        }}
+                        animate={{
+                          opacity: 1,
+                          y: 0,
+                        }}
+                        exit={{
+                          opacity: 0,
+                          y: -8,
+                        }}
+                        className="
+                          flex
+                          items-center
+                          gap-2
+                          rounded-2xl
+                          border
+                          border-red-500/20
+                          bg-red-500/10
+                          px-4
+                          py-3
+                          text-sm
+                          text-red-600
+                          dark:text-red-400
+                        "
+                      >
+                        <XCircle className="h-4 w-4" />
+                        Something went wrong. Please try again.
+                      </Motion.div>
+                    )}
+                  </AnimatePresence>
 
-                    <Motion.button
-                      whileHover={
-                        status === "idle"
-                          ? {
-                              y: -3,
-                              scale: 1.01,
-                            }
-                          : {}
-                      }
-                      whileTap={
-                        status === "idle"
-                          ? {
-                              scale: 0.98,
-                            }
-                          : {}
-                      }
-                      type="submit"
-                      disabled={status !== "idle"}
-                      className={`
-                        group/button
-                        relative
-                        w-full
-                        overflow-hidden
-                        rounded-2xl
-                        px-6
-                        py-4
-                        text-sm
-                        font-bold
-                        shadow-xl
-                        transition-all
-                        duration-300
+                  {/* =================================================
+                      SEND BUTTON
+                  ================================================= */}
 
-                        ${
-                          status === "idle"
-                            ? "bg-gradient-to-r from-primary via-primary to-fuchsia-500 text-white shadow-primary/20 hover:shadow-2xl hover:shadow-primary/35"
-                            : status === "submitting"
-                              ? "cursor-wait bg-primary/70 text-white"
-                              : status === "success"
-                                ? "bg-emerald-500 text-white shadow-emerald-500/30"
-                                : "bg-red-500 text-white shadow-red-500/30"
-                        }
-                      `}
-                    >
-                      {status === "idle" && (
-                        <Motion.div
-                          animate={{
-                            x: ["-120%", "220%"],
-                          }}
-                          transition={{
-                            duration: 2.8,
-                            repeat: Infinity,
-                            repeatDelay: 3,
-                            ease: "easeInOut",
-                          }}
-                          className="
-                            pointer-events-none
-                            absolute
-                            top-0
-                            h-full
-                            w-16
-                            rotate-[20deg]
-                            bg-white/20
-                            blur-md
-                          "
-                        />
-                      )}
-
-                      <AnimatePresence mode="wait" initial={false}>
-                        <Motion.span
-                          key={status}
-                          initial={{
-                            opacity: 0,
-                            y: 7,
-                          }}
-                          animate={{
-                            opacity: 1,
-                            y: 0,
-                          }}
-                          exit={{
-                            opacity: 0,
-                            y: -7,
-                          }}
-                          className="
-                            relative
-                            z-10
-                            flex
-                            items-center
-                            justify-center
-                            gap-2.5
-                          "
-                        >
-                          {status === "idle" && (
-                            <>
-                              <Send
-                                className="
-                                  h-4
-                                  w-4
-                                  transition-transform
-                                  duration-300
-                                  group-hover/button:-rotate-6
-                                "
-                              />
-                              Send Message
-                              <ArrowUpRight
-                                className="
-                                  h-3.5
-                                  w-3.5
-                                  opacity-70
-                                  transition-transform
-                                  duration-300
-                                  group-hover/button:-translate-y-0.5
-                                  group-hover/button:translate-x-0.5
-                                "
-                              />
-                            </>
-                          )}
-
-                          {status === "submitting" && (
-                            <>
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                              Sending...
-                            </>
-                          )}
-
-                          {status === "success" && (
-                            <>
-                              <CheckCircle2 className="h-4 w-4" />
-                              Message sent successfully
-                            </>
-                          )}
-
-                          {status === "error" && (
-                            <>
-                              <XCircle className="h-4 w-4" />
-                              Something went wrong
-                            </>
-                          )}
-                        </Motion.span>
-                      </AnimatePresence>
-                    </Motion.button>
-                  </form>
-
-                  {/* FOOTER */}
-
-                  <div
+                  <button
+                    type="submit"
+                    disabled={status === "submitting" || cooldown > 0}
                     className="
-                      mt-4
+                      group
+                      relative
                       flex
+                      w-full
                       items-center
                       justify-center
                       gap-2
-                      font-mono
-                      text-[9px]
-                      font-medium
-                      uppercase
-                      tracking-widest
-                      text-slate-400
-                      dark:text-slate-500
+                      overflow-hidden
+                      rounded-2xl
+                      bg-primary
+                      px-5
+                      py-3.5
+                      text-sm
+                      font-semibold
+                      text-primary-foreground
+                      shadow-lg
+                      shadow-primary/20
+                      transition-all
+                      duration-300
+                      hover:-translate-y-0.5
+                      hover:shadow-xl
+                      hover:shadow-primary/25
+                      disabled:cursor-not-allowed
+                      disabled:translate-y-0
+                      disabled:opacity-60
                     "
                   >
-                    <span className="h-1 w-1 rounded-full bg-primary" />
-                    Straight to my inbox
-                    <span className="h-1 w-1 rounded-full bg-primary" />
-                  </div>
-                </div>
+                    {/* Shine */}
+
+                    <span
+                      className="
+                        pointer-events-none
+                        absolute
+                        inset-0
+                        -translate-x-full
+                        bg-gradient-to-r
+                        from-transparent
+                        via-white/20
+                        to-transparent
+                        transition-transform
+                        duration-700
+                        group-hover:translate-x-full
+                      "
+                    />
+
+                    {/* SUBMITTING */}
+
+                    {status === "submitting" ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Sending...
+                      </>
+                    ) : cooldown > 0 ? (
+                      <>
+                        <Loader2 className="h-4 w-4" />
+                        Please wait {cooldown}s
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                        Send Message
+                        <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                      </>
+                    )}
+                  </button>
+
+                  {/* COOLDOWN INFO */}
+
+                  {cooldown > 0 && (
+                    <p
+                      className="
+                        text-center
+                        text-[11px]
+                        font-medium
+                        text-slate-400
+                      "
+                    >
+                      You can send another message after the cooldown ends.
+                    </p>
+                  )}
+                </form>
               </div>
-            </TiltCard>
-          </Motion.div>
+            </div>
+          </TiltCard>
         </div>
       </div>
     </section>

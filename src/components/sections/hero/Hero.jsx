@@ -198,7 +198,7 @@ export default function Hero() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.3, duration: 0.8, ease: "easeOut" }}
-            className="relative order-1 lg:order-2 w-full h-[340px] sm:h-[440px] lg:h-[560px] overflow-hidden"
+            className="relative order-1 lg:order-2 w-full h-[340px] sm:h-[440px] lg:h-[560px] overflow-visible"
           >
             <HeroScene />
           </Motion.div>

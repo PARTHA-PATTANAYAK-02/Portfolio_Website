@@ -1,691 +1,2473 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   motion as Motion,
   AnimatePresence,
+  animate,
   useMotionValue,
+  useSpring,
   useTransform,
+  useVelocity,
 } from "framer-motion";
+import * as THREE from "three";
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 
-/* ---------- Message pools ---------- */
-const CLICK_REACTIONS = [
+/* ================= Config ================= */
+const W = 170;
+const H = 190;
+const CW = 380;
+const CH = 420;
+const MARGIN = 8;
+const SLEEP_MS = 120000;
+const LOAF_MS = 30000;
+const DRAG_PX = 5;
+const HOLD_MS = 480;
+const KEY = "petBuddyPos-v8";
+const FALL_KEY = "petBuddyFell-v8";
+const STREAK_KEY = "petBuddyStreak-v8";
+const SPRING = { stiffness: 210, damping: 22, mass: 0.9 };
+const LOOK = { stiffness: 110, damping: 16 };
+
+/* ================= Messages ================= */
+const CLICK = [
   "Meow! 🐱",
   "Purr... 😽",
   "Hey human! 👋",
   "Stop poking! 😾",
-  "Prrrr 😺",
   "Nya! 🐾",
   "Busy napping! 💤",
   "What do you need? 🙀",
+  "Mrrrow? 😺",
+  "Boop! 👃",
+  "Ki korcho? 😺",
+  "Yes, yes, I'm cute 😼",
+  "That tickles! 😹",
 ];
-
-const DRAG_REACTIONS = [
-  "Nyaaa! 😹",
+const DBL = [
+  "Nyaaa!! 😻",
+  "Wheee! 🌀",
+  "Backflip! 🤸",
+  "Ta-da! ✨",
+  "Do it again! 😹",
+  "Ninja cat! 🥷",
+];
+const TRIPLE = [
+  "HISS! 😾",
+  "Enough poking!! 💢",
+  "I will scratch you 🙀",
+  "Hmph! 😤",
+  "Ask nicely! 😠",
+];
+const DRAG = [
+  "Where are you taking me? 😹",
   "Put me down! 😿",
-  "Where to? 🗺️",
   "Weee! 🐈",
   "Gentle paws! 🐾",
+  "I'm flying! 🪽",
+  "Hold me tight! 🙀",
+  "Are we there yet? 🚗",
+  "Wheeeee! 🌪️",
 ];
-
-const IDLE_MESSAGES = [
+const DROP = [
+  "Landed! 😼",
+  "New spot, nice 😸",
+  "Mine now 🐾",
+  "Smooth! 😺",
+  "Cozy here 🛋️",
+];
+const PET = [
+  "Purrrrr... 😽",
+  "So good... 💖",
+  "Mrrrrr 😻",
+  "Don't stop! 🥰",
+  "Ador koro amake 🥰",
+];
+const IDLE = [
   "Fish? 🐟",
   "Nap time 💤",
-  "Meow 🐱",
   "Pet me! 🐾",
   "I'm watching 👀",
-  "Purr purr 😽",
   "Sunbeam? ☀️",
   "Yarn ball? 🧶",
+  "Treats? 🍗",
+  "Is that a bird? 🐦",
+  "Alt + click = treat 🐟",
+  "Tail is right there... 😼",
+  "Zoomies soon 💨",
+  "Pet me or else 😼",
+];
+const BANGLISH = [
+  "Khide peyeche! 🍽️",
+  "Mach de! 🐟",
+  "Ador koro amake 🥰",
+  "Ghum asche 😴",
+  "Ki korcho? 🤔",
+  "Bhalo achhi 😸",
+];
+const SCROLL = [
+  "Whoa, scrolling! 🌀",
+  "Are you reading? 📖",
+  "Down we go ⬇️",
+  "So much page! 📜",
+  "Slow down! 😵",
+];
+const TYPE = [
+  "Typing? So fast! ⌨️",
+  "Click clack 🐾",
+  "Writing code? 💻",
+  "I can help (by sitting on it) 😼",
+];
+const YUM = [
+  "Yum! 😋",
+  "Nom nom nom 🐟",
+  "Delicious! 😻",
+  "More please! 🙏",
+  "Best fish ever! 🐟",
+];
+const BURST = ["🐾", "💜", "✨", "🐱", "🐟", "💖", "⭐"];
+const CONFETTI = ["🎉", "🎊", "✨", "💖", "⭐", "🌟", "💜", "🥳"];
+
+const HOUR_MSGS = {
+  6: "Wake up! ☀️",
+  7: "Breakfast time? 🥞",
+  8: "Breakfast! 🥞",
+  11: "Hungry yet? 🍕",
+  12: "Lunch time! 🍱",
+  13: "Lunch time! 🍱",
+  15: "Tea time? 🍵",
+  16: "Snack o'clock 🍪",
+  17: "Tea time ☕",
+  18: "Sunset vibes 🌅",
+  19: "Dinner time! 🍽️",
+  20: "Dinner? Fish please 🐟",
+  21: "Sleep soon... 💤",
+  22: "Bed time 🌙",
+  23: "It's late... sleep soon 😴",
+  0: "Go to bed! 🛏️",
+  1: "Why are you awake? 🦉",
+};
+
+const MILESTONES = [
+  { ms: 3 * 60 * 1000, msg: "3 minutes together! 🎉" },
+  { ms: 10 * 60 * 1000, msg: "10 min! Best friends 💖" },
+  { ms: 30 * 60 * 1000, msg: "30 min! Take a break ☕" },
+  { ms: 60 * 60 * 1000, msg: "1 hour together! ☕" },
+  { ms: 2 * 60 * 60 * 1000, msg: "2 hrs! Break time ☕" },
 ];
 
-const SLEEP_MESSAGE = "Zzz... 💤";
-const WAKE_MESSAGE = "Mew! 🐱";
-const LAND_MESSAGE = "Mew! 🐱";
-const EMOJI_BURST = ["🐾", "💜", "✨", "🐱", "🐟", "💖", "🎉", "⭐"];
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
-const SIZE = 76;
-const SAFE_MARGIN = 14;
-const IDLE_MSG_INTERVAL = 14000;
-const SLEEP_TIMEOUT = 28000;
-const CLICK_DRAG_THRESHOLD = 5;
-const STORAGE_KEY = "petBuddyPos-v2";
-const FALL_SESSION_KEY = "petBuddyFell-v2";
+/* ---------- time awareness ---------- */
+function greetingForNow() {
+  const d = new Date();
+  const h = d.getHours();
+  const day = d.getDay();
+  let base;
+  if (h >= 0 && h < 5) base = "Why are you awake? 🦉";
+  else if (h < 12) base = "Good morning! ☀️";
+  else if (h < 17) base = "Good afternoon! 🌤️";
+  else if (h < 21) base = "Good evening! 🌆";
+  else base = "Good night... Zzz 🌙💤";
+  if (day === 1) base += " Happy Monday! 💪";
+  else if (day === 5) base += " TGIF! 🎉";
+  else if (day === 0 || day === 6) base += " Weekend! 🎈";
+  return base;
+}
+const hourLine = (h) => HOUR_MSGS[h] || greetingForNow();
+const dayLine = () => {
+  const d = new Date().getDay();
+  if (d === 1) return "Monday again... 😾";
+  if (d === 5) return "It's Friday! 🎉";
+  if (d === 0 || d === 6) return "Weekend vibes 😸";
+  return null;
+};
 
-export default function PetBuddy() {
-  const [ready, setReady] = useState(false);
-  const [isTouch, setIsTouch] = useState(false);
+/* ================= 3D themes ================= */
+const THEME3 = {
+  light: {
+    fur: "#e9a45d",
+    belly: "#fff2dd",
+    muzzle: "#fff0dc",
+    earIn: "#f4a7a1",
+    stripe: "#b9631f",
+    eye: "#8cc63f",
+    nose: "#e9788c",
+    collar: "#e5533d",
+    bell: "#f6c445",
+    blush: "#ff9a8b",
+    line: "#4a2c14",
+    whisker: "#a88660",
+    orb: "#ff9ec4",
+    sheen: "#ffe2b8",
+    sky: "#fff4e0",
+    ground: "#d9a066",
+    hemiI: 0.7,
+    key: "#fff2d8",
+    keyI: 2.3,
+    rim: "#ffb86b",
+    rimI: 1.4,
+    eyeGlow: 0,
+  },
+  dark: {
+    fur: "#33364a",
+    belly: "#454a63",
+    muzzle: "#4a4f68",
+    earIn: "#9a5a7d",
+    stripe: "#1b1c28",
+    eye: "#ffd01f",
+    nose: "#e48bb4",
+    collar: "#6a5cff",
+    bell: "#ffe9a8",
+    blush: "#a35c9c",
+    line: "#07070b",
+    whisker: "#f0f2ff",
+    orb: "#ffe27a",
+    sheen: "#6d79c0",
+    sky: "#5560a8",
+    ground: "#14151f",
+    hemiI: 0.55,
+    key: "#9aa8ff",
+    keyI: 1.6,
+    rim: "#7b6cff",
+    rimI: 3.2,
+    eyeGlow: 0.9,
+  },
+};
+const UI = {
+  light: {
+    glow: "rgba(255,190,100,0.55)",
+    glowO: 0.4,
+    bg: "#fffaf1",
+    text: "#4a3320",
+    border: "#ecd2a8",
+    ring: "#e9a45c",
+    dum: "#e5533d",
+    dust: "rgba(150,115,80,.5)",
+    stroke: "#fff",
+  },
+  dark: {
+    glow: "rgba(105,118,255,0.65)",
+    glowO: 0.65,
+    bg: "#1c1e2a",
+    text: "#ecebff",
+    border: "#3b3f5c",
+    ring: "#7a86ff",
+    dum: "#ffd43b",
+    dust: "rgba(160,165,200,.5)",
+    stroke: "#09090c",
+  },
+};
 
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-
-  const bubbleX = useTransform(x, (v) => v + SIZE / 2);
-  const bubbleY = useTransform(y, (v) => v - 12);
-  const burstX = useTransform(x, (v) => v + SIZE / 2);
-  const burstY = useTransform(y, (v) => v + SIZE / 2);
-  const shadowX = useTransform(x, (v) => v + SIZE / 2);
-  const shadowY = useTransform(y, (v) => v + SIZE + 4);
-
-  const [message, setMessage] = useState(null);
-  const [burst, setBurst] = useState([]);
-  const [eyeOffset, setEyeOffset] = useState({ x: 0, y: 0 });
-  const [blinking, setBlinking] = useState(false);
-  const [clicked, setClicked] = useState(false);
-  const [hovered, setHovered] = useState(false);
-  const [dragging, setDragging] = useState(false);
-  const [sleeping, setSleeping] = useState(false);
-  const [sparkle, setSparkle] = useState(false);
-  const [landing, setLanding] = useState(false);
-  const [dustPuff, setDustPuff] = useState(false);
-
-  const buddyRef = useRef(null);
-  const cursorRef = useRef({ x: -9999, y: -9999 });
-  const lastInteraction = useRef(Date.now());
-  const messageTimer = useRef(null);
-  const clickTimer = useRef(null);
-
-  const safeTarget = useCallback((rawX, rawY) => {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    const maxX = w - SIZE - SAFE_MARGIN;
-    const maxY = h - SIZE - SAFE_MARGIN;
-    return {
-      x: Math.max(SAFE_MARGIN, Math.min(maxX, rawX)),
-      y: Math.max(SAFE_MARGIN, Math.min(maxY, rawY)),
+/* ================= Theme detection ================= */
+function parseLum(css) {
+  const m = css && css.match(/rgba?\(([^)]+)\)/);
+  if (!m) return null;
+  const p = m[1]
+    .split(/[ ,/]+/)
+    .filter(Boolean)
+    .map(parseFloat);
+  if (p.length >= 4 && p[3] === 0) return null;
+  return (0.2126 * p[0] + 0.7152 * p[1] + 0.0722 * p[2]) / 255;
+}
+function readDark() {
+  const d = document.documentElement;
+  const b = document.body;
+  const attrs = [
+    d.dataset.theme,
+    d.dataset.bsTheme,
+    d.dataset.mode,
+    d.getAttribute("data-color-mode"),
+    b?.dataset?.theme,
+  ];
+  if (
+    d.classList.contains("dark") ||
+    b?.classList.contains("dark") ||
+    attrs.includes("dark")
+  )
+    return true;
+  if (
+    d.classList.contains("light") ||
+    b?.classList.contains("light") ||
+    attrs.includes("light")
+  )
+    return false;
+  const cs = d.style.colorScheme;
+  if (cs === "dark") return true;
+  if (cs === "light") return false;
+  for (const el of [b, d]) {
+    if (!el) continue;
+    const lum = parseLum(getComputedStyle(el).backgroundColor);
+    if (lum !== null) return lum < 0.45;
+  }
+  return window.matchMedia("(prefers-color-scheme: dark)").matches;
+}
+function useIsDark() {
+  const [dark, setDark] = useState(readDark);
+  useEffect(() => {
+    const update = () => setDark(readDark());
+    const mo = new MutationObserver(update);
+    const opts = {
+      attributes: true,
+      attributeFilter: [
+        "class",
+        "data-theme",
+        "data-bs-theme",
+        "data-mode",
+        "data-color-mode",
+        "style",
+      ],
+    };
+    mo.observe(document.documentElement, opts);
+    if (document.body) mo.observe(document.body, opts);
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    mq.addEventListener("change", update);
+    window.addEventListener("storage", update);
+    const poll = setInterval(update, 1500);
+    return () => {
+      mo.disconnect();
+      mq.removeEventListener("change", update);
+      window.removeEventListener("storage", update);
+      clearInterval(poll);
     };
   }, []);
+  return dark;
+}
 
-  const showMessage = useCallback((msg, duration = 2200) => {
-    clearTimeout(messageTimer.current);
-    setMessage(msg);
-    messageTimer.current = setTimeout(() => setMessage(null), duration);
+/* ================= 3D cat (three.js) — bell now hangs from collar ================= */
+function buildCat() {
+  const root = new THREE.Group();
+  const yaw = new THREE.Group();
+  root.add(yaw);
+  const flip = new THREE.Group();
+  flip.position.y = 1.6;
+  yaw.add(flip);
+  const cat = new THREE.Group();
+  cat.position.y = -1.6;
+  flip.add(cat);
+
+  const SPH = new THREE.SphereGeometry(1, 30, 22);
+  const mats = {};
+  const furLike = (name) =>
+    (mats[name] = new THREE.MeshPhysicalMaterial({
+      color: "#ffffff",
+      roughness: 0.88,
+      metalness: 0,
+      sheen: 0.6,
+      sheenRoughness: 0.6,
+      sheenColor: new THREE.Color("#ffffff"),
+    }));
+  const mk = (name, extra = {}) =>
+    (mats[name] = new THREE.MeshStandardMaterial({
+      color: "#ffffff",
+      roughness: 0.82,
+      metalness: 0,
+      ...extra,
+    }));
+  ["fur", "belly", "muzzle", "earIn"].forEach(furLike);
+  ["stripe", "nose", "whisker"].forEach((n) => mk(n));
+  mk("collar", { roughness: 0.4, emissive: "#000000" });
+  mats.iris = new THREE.MeshPhysicalMaterial({
+    color: "#ffffff",
+    roughness: 0.2,
+    clearcoat: 1,
+    clearcoatRoughness: 0.05,
+    emissive: "#000000",
+  });
+  mk("pupil", { roughness: 0.2 });
+  mk("line", { roughness: 0.6 });
+  mk("bell", { roughness: 0.25, metalness: 0.7, emissive: "#000000" });
+  mk("orb", { roughness: 0.4, emissive: "#000000" });
+  mk("blush", { transparent: true, opacity: 0.55, depthWrite: false });
+  mats.tongue = new THREE.MeshStandardMaterial({
+    color: "#ef7f95",
+    roughness: 0.6,
+  });
+  mats.white = new THREE.MeshBasicMaterial({ color: "#ffffff" });
+  mats.gold = new THREE.MeshStandardMaterial({
+    color: "#ffd34d",
+    roughness: 0.25,
+    metalness: 0.8,
+  });
+  mats.ao = new THREE.MeshBasicMaterial({
+    color: "#000000",
+    transparent: true,
+    opacity: 0.2,
+    depthWrite: false,
+  });
+
+  const ell = (mat, rx, ry, rz, x, y, z, parent) => {
+    const m = new THREE.Mesh(SPH, mat);
+    m.scale.set(rx, ry, rz);
+    m.position.set(x, y, z);
+    (parent || cat).add(m);
+    return m;
+  };
+
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = 64;
+  const cx = cv.getContext("2d");
+  const gr = cx.createRadialGradient(32, 32, 2, 32, 32, 32);
+  gr.addColorStop(0, "rgba(0,0,0,0.85)");
+  gr.addColorStop(1, "rgba(0,0,0,0)");
+  cx.fillStyle = gr;
+  cx.fillRect(0, 0, 64, 64);
+  const shTex = new THREE.CanvasTexture(cv);
+  const shadow = new THREE.Mesh(
+    new THREE.PlaneGeometry(1, 1),
+    new THREE.MeshBasicMaterial({
+      map: shTex,
+      transparent: true,
+      depthWrite: false,
+      opacity: 0.5,
+    }),
+  );
+  shadow.rotation.x = -Math.PI / 2;
+  shadow.position.set(0, 0.01, 0.2);
+  shadow.scale.set(3.6, 1.8, 1);
+  yaw.add(shadow);
+
+  const body = new THREE.Group();
+  cat.add(body);
+  ell(mats.fur, 0.95, 1.2, 0.85, 0, 0.95, 0, body);
+  ell(mats.belly, 0.5, 0.72, 0.25, 0, 0.85, 0.66, body);
+  ell(mats.ao, 0.8, 0.32, 0.5, 0, 1.5, 0.55, body);
+  [-1, 1].forEach((s) => {
+    ell(mats.fur, 0.6, 0.62, 0.75, s * 0.8, 0.52, 0.1, body);
+    ell(mats.fur, 0.4, 0.2, 0.52, s * 0.95, 0.18, 0.6, body);
+    for (let i = -1; i <= 1; i++)
+      ell(
+        mats.stripe,
+        0.012,
+        0.07,
+        0.012,
+        s * 0.95 + i * 0.13,
+        0.17,
+        1.1,
+        body,
+      );
+    [0.55, 0.85, 1.15].forEach((y) => {
+      const st = ell(mats.stripe, 0.04, 0.26, 0.05, s * 0.9, y, 0.2, body);
+      st.rotation.z = s * 0.35;
+    });
+    for (let i = 0; i < 2; i++) {
+      const hs = ell(
+        mats.stripe,
+        0.04,
+        0.2,
+        0.05,
+        s * (1.2 - i * 0.03),
+        0.45 + i * 0.3,
+        0.2,
+        body,
+      );
+      hs.rotation.z = s * 0.3;
+    }
+  });
+  const collar = new THREE.Mesh(
+    new THREE.TorusGeometry(0.78, 0.1, 14, 40),
+    mats.collar,
+  );
+  collar.position.set(0, 1.62, 0.06);
+  collar.rotation.x = Math.PI / 2 - 0.22;
+  body.add(collar);
+
+  // ★ Small bell hanging from the collar front (golay thakbe)
+  const bellGroup = new THREE.Group();
+  bellGroup.position.set(0, 1.48, 0.72);
+  body.add(bellGroup);
+  const bell = ell(mats.bell, 0.085, 0.085, 0.085, 0, 0, 0, bellGroup);
+  // tiny slit to look like a bell
+  const bellSlit = new THREE.Mesh(
+    new THREE.BoxGeometry(0.09, 0.012, 0.02),
+    mats.line,
+  );
+  bellSlit.position.set(0, -0.02, 0.08);
+  bellGroup.add(bellSlit);
+  // small hanging loop
+  const bellLoop = new THREE.Mesh(
+    new THREE.TorusGeometry(0.03, 0.008, 6, 12),
+    mats.bell,
+  );
+  bellLoop.position.set(0, 0.09, 0);
+  bellLoop.rotation.x = Math.PI / 2;
+  bellGroup.add(bellLoop);
+
+  const legF = {};
+  [-1, 1].forEach((s) => {
+    const g = new THREE.Group();
+    g.position.set(s * 0.34, 1.3, 0.62);
+    ell(mats.fur, 0.24, 0.62, 0.26, 0, -0.6, 0, g);
+    ell(mats.fur, 0.3, 0.17, 0.36, 0, -1.18, 0.2, g);
+    for (let i = -1; i <= 1; i += 2)
+      ell(mats.stripe, 0.011, 0.06, 0.011, i * 0.08, -1.2, 0.55, g);
+    body.add(g);
+    legF[s] = g;
+  });
+
+  const head = new THREE.Group();
+  head.position.set(0, 2.2, 0.15);
+  cat.add(head);
+  const sz = (x, y) =>
+    1.05 * Math.sqrt(Math.max(0, 1 - (x / 1.25) ** 2 - (y / 1.0) ** 2));
+  ell(mats.fur, 1.25, 1.0, 1.05, 0, 0, 0, head);
+  [-1, 1].forEach((s) => {
+    const r1 = ell(mats.fur, 0.42, 0.3, 0.42, s * 1.1, -0.3, 0.2, head);
+    r1.rotation.z = s * -0.6;
+    const r2 = ell(mats.fur, 0.3, 0.2, 0.3, s * 0.9, -0.55, 0.3, head);
+    r2.rotation.z = s * -0.4;
+    ell(mats.blush, 0.24, 0.15, 0.05, s * 0.85, -0.28, sz(0.85, -0.28), head);
+    for (let i = 0; i < 2; i++) {
+      const cs = ell(
+        mats.stripe,
+        0.22,
+        0.034,
+        0.03,
+        s * 1.1,
+        -0.02 - i * 0.16,
+        sz(1.1, -0.02 - i * 0.16) - 0.05,
+        head,
+      );
+      cs.rotation.y = s * 1.05;
+      cs.rotation.z = s * -0.15;
+    }
+    ell(mats.muzzle, 0.22, 0.16, 0.2, s * 0.17, -0.38, 0.88, head);
+  });
+  [
+    [-0.45, 0.55, 0.5],
+    [-0.22, 0.68, 0.15],
+    [0, 0.72, 0],
+    [0.22, 0.68, -0.15],
+    [0.45, 0.55, -0.5],
+  ].forEach(([x, y, r]) => {
+    const st = ell(mats.stripe, 0.045, 0.2, 0.03, x, y, sz(x, y), head);
+    st.rotation.x = -0.6;
+    st.rotation.z = r;
+  });
+  ell(mats.nose, 0.1, 0.07, 0.07, 0, -0.2, 0.99, head);
+
+  const eyes = [];
+  const arcGeo = new THREE.TorusGeometry(0.26, 0.045, 8, 22, Math.PI);
+  [-1, 1].forEach((s) => {
+    const x = s * 0.5,
+      y = 0.12,
+      z = sz(x, y) - 0.07;
+    const eye = new THREE.Group();
+    eye.position.set(x, y, z);
+    ell(mats.line, 0.34, 0.37, 0.08, 0, 0, -0.01, eye);
+    ell(mats.iris, 0.3, 0.33, 0.1, 0, 0, 0.02, eye);
+    const pupilG = new THREE.Group();
+    eye.add(pupilG);
+    const pupil = ell(mats.pupil, 0.17, 0.22, 0.06, 0, 0, 0.09, pupilG);
+    ell(mats.white, 0.085, 0.09, 0.04, -0.1, 0.12, 0.13, eye);
+    ell(mats.white, 0.05, 0.05, 0.03, 0.1, -0.12, 0.12, eye);
+    head.add(eye);
+    const arc = new THREE.Mesh(arcGeo, mats.line);
+    arc.position.set(x, y - 0.02, z + 0.08);
+    arc.visible = false;
+    head.add(arc);
+    const brow = new THREE.Mesh(
+      new THREE.BoxGeometry(0.6, 0.1, 0.07),
+      mats.line,
+    );
+    brow.position.set(x, y + 0.45, z);
+    brow.rotation.z = s * -0.4;
+    brow.visible = false;
+    head.add(brow);
+    eyes.push({ eye, pupilG, pupil, arc, brow, s, y });
+  });
+
+  const mouth = new THREE.Group();
+  mouth.position.set(0, -0.42, 0.97);
+  head.add(mouth);
+  const arc = (r, x, g) => {
+    const a = new THREE.Mesh(
+      new THREE.TorusGeometry(r, 0.025, 6, 16, Math.PI),
+      mats.line,
+    );
+    a.rotation.z = Math.PI;
+    a.position.set(x, 0, 0);
+    g.add(a);
+  };
+  const mv = {
+    idle: new THREE.Group(),
+    smile: new THREE.Group(),
+    open: new THREE.Group(),
+    grr: new THREE.Group(),
+    lick: new THREE.Group(),
+  };
+  arc(0.11, -0.11, mv.idle);
+  arc(0.11, 0.11, mv.idle);
+  arc(0.17, -0.17, mv.smile);
+  arc(0.17, 0.17, mv.smile);
+  arc(0.14, -0.14, mv.lick);
+  arc(0.14, 0.14, mv.lick);
+  ["idle", "smile", "lick"].forEach((n) => {
+    const line = new THREE.Mesh(
+      new THREE.BoxGeometry(0.022, 0.14, 0.025),
+      mats.line,
+    );
+    line.position.y = 0.07;
+    mv[n].add(line);
+  });
+  ell(mats.line, 0.13, 0.16, 0.06, 0, -0.08, 0, mv.open);
+  ell(mats.tongue, 0.09, 0.055, 0.04, 0, -0.15, 0.03, mv.open);
+  for (let i = 0; i < 6; i++) {
+    const b = new THREE.Mesh(
+      new THREE.BoxGeometry(0.11, 0.025, 0.035),
+      mats.line,
+    );
+    b.position.set(-0.27 + i * 0.11, i % 2 ? 0.04 : -0.04, 0);
+    b.rotation.z = i % 2 ? 0.9 : -0.9;
+    mv.grr.add(b);
+  }
+  const tongue = ell(mats.tongue, 0.07, 0.1, 0.04, 0.1, -0.2, 0.02, mv.lick);
+  Object.values(mv).forEach((g) => {
+    g.visible = false;
+    mouth.add(g);
+  });
+
+  const whiskers = [];
+  [-1, 1].forEach((s) => {
+    for (let i = 0; i < 3; i++) {
+      const g = new THREE.Group();
+      g.position.set(s * 0.7, -0.33 + (i - 1) * 0.1, 0.85);
+      g.rotation.set(0, -s * (0.4 + i * 0.08), s * (1 - i) * 0.28);
+      const c = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.02, 0.008, 1.6, 6),
+        mats.whisker,
+      );
+      c.rotation.z = Math.PI / 2;
+      c.position.x = s * 0.8;
+      g.add(c);
+      head.add(g);
+      whiskers.push(g);
+    }
+  });
+
+  const earShape = (w, h) => {
+    const sh = new THREE.Shape();
+    sh.moveTo(-w + 0.12, 0);
+    sh.lineTo(w - 0.12, 0);
+    sh.quadraticCurveTo(w, 0, w - 0.06, 0.16);
+    sh.lineTo(0.1, h - 0.14);
+    sh.quadraticCurveTo(0, h + 0.05, -0.1, h - 0.14);
+    sh.lineTo(-w + 0.06, 0.16);
+    sh.quadraticCurveTo(-w, 0, -w + 0.12, 0);
+    return sh;
+  };
+  const earGeo = new THREE.ExtrudeGeometry(earShape(0.56, 1.25), {
+    depth: 0.12,
+    bevelEnabled: true,
+    bevelThickness: 0.1,
+    bevelSize: 0.09,
+    bevelSegments: 5,
+    curveSegments: 14,
+  });
+  earGeo.translate(0, 0, -0.06);
+  const earInGeo = new THREE.ExtrudeGeometry(earShape(0.34, 0.88), {
+    depth: 0.04,
+    bevelEnabled: true,
+    bevelThickness: 0.04,
+    bevelSize: 0.05,
+    bevelSegments: 4,
+    curveSegments: 12,
+  });
+  const mkEar = (s) => {
+    const g = new THREE.Group();
+    g.position.set(s * 0.8, 0.66, -0.05);
+    const outer = new THREE.Mesh(earGeo, mats.fur);
+    const inner = new THREE.Mesh(earInGeo, mats.earIn);
+    inner.position.set(0, 0.12, 0.13);
+    g.add(outer, inner);
+    head.add(g);
+    return g;
+  };
+  const earL = mkEar(-1);
+  const earR = mkEar(1);
+
+  const tailRoot = new THREE.Group();
+  tailRoot.position.set(0.8, 0.4, -0.3);
+  cat.add(tailRoot);
+  const tailSegs = [];
+  const SEG = 0.34;
+  let prev = tailRoot;
+  for (let i = 0; i < 7; i++) {
+    const g = new THREE.Group();
+    if (i > 0) g.position.x = SEG;
+    prev.add(g);
+    const r = 0.17 - i * 0.011;
+    const m = new THREE.Mesh(
+      new THREE.CapsuleGeometry(r, SEG - 2 * r + 0.04, 6, 14),
+      i === 6 ? mats.stripe : mats.fur,
+    );
+    m.rotation.z = Math.PI / 2;
+    m.position.x = SEG / 2;
+    g.add(m);
+    if (i % 2 === 1) {
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(r + 0.008, 0.04, 8, 20),
+        mats.stripe,
+      );
+      ring.rotation.y = Math.PI / 2;
+      ring.position.x = SEG / 2;
+      g.add(ring);
+    }
+    tailSegs.push(g);
+    prev = g;
+  }
+
+  const orbs = [0, 1, 2].map((i) => {
+    const m = new THREE.Mesh(new THREE.OctahedronGeometry(0.1), mats.orb);
+    root.add(m);
+    return { m, i };
+  });
+
+  const hemi = new THREE.HemisphereLight("#ffffff", "#444444", 1);
+  const key = new THREE.DirectionalLight("#ffffff", 2);
+  key.position.set(3, 6, 6);
+  const rim = new THREE.DirectionalLight("#ffffff", 1);
+  rim.position.set(-4, 3, -4);
+  root.add(hemi, key, rim);
+
+  const COLORS = [
+    "fur",
+    "belly",
+    "muzzle",
+    "earIn",
+    "stripe",
+    "nose",
+    "collar",
+    "whisker",
+    "blush",
+    "line",
+    "orb",
+    "iris",
+    "bell",
+    "pupil",
+  ];
+  const targets = {};
+  COLORS.forEach((k) => (targets[k] = new THREE.Color("#ffffff")));
+  const L = {
+    hemiSky: new THREE.Color(),
+    hemiGround: new THREE.Color(),
+    key: new THREE.Color(),
+    rim: new THREE.Color(),
+    sheen: new THREE.Color(),
+    hemiI: 1,
+    keyI: 2,
+    rimI: 1,
+    eyeGlow: 0,
+  };
+  let first = true;
+  let appliedTheme = null;
+  const applyTheme = (T3) => {
+    [
+      "fur",
+      "belly",
+      "muzzle",
+      "earIn",
+      "stripe",
+      "nose",
+      "collar",
+      "whisker",
+      "blush",
+      "line",
+      "orb",
+    ].forEach((k) => targets[k].set(T3[k]));
+    targets.iris.set(T3.eye);
+    targets.bell.set(T3.bell);
+    targets.pupil.set("#0a0a0c");
+    L.hemiSky.set(T3.sky);
+    L.hemiGround.set(T3.ground);
+    L.key.set(T3.key);
+    L.rim.set(T3.rim);
+    L.sheen.set(T3.sheen);
+    L.hemiI = T3.hemiI;
+    L.keyI = T3.keyI;
+    L.rimI = T3.rimI;
+    L.eyeGlow = T3.eyeGlow;
+    appliedTheme = T3;
+    if (first) {
+      COLORS.forEach((k) => mats[k].color.copy(targets[k]));
+      ["fur", "belly", "muzzle", "earIn"].forEach((k) =>
+        mats[k].sheenColor.copy(L.sheen),
+      );
+      hemi.color.copy(L.hemiSky);
+      hemi.groundColor.copy(L.hemiGround);
+      key.color.copy(L.key);
+      rim.color.copy(L.rim);
+      hemi.intensity = L.hemiI;
+      key.intensity = L.keyI;
+      rim.intensity = L.rimI;
+      mats.iris.emissiveIntensity = L.eyeGlow;
+      first = false;
+    }
+  };
+
+  const lerp = (a, b, k) => a + (b - a) * k;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const envMats = Object.values(mats).filter((m) => m.isMeshStandardMaterial);
+  const F = { dir: 1, yaw: 0 };
+  const Wk = { phase: 0, amp: 0 };
+  const cur = {
+    sy: 1,
+    sx: 1,
+    headY: 2.2,
+    headZ: 0.15,
+    headX: 0,
+    roll: 0,
+    legS: 1,
+    lean: 0,
+    tailA: 0.2,
+    wrap: 0,
+    puff: 1,
+    sBell: 1,
+    blink: 1,
+    earL: 0.28,
+    earR: -0.28,
+    tailAmp: 0.1,
+    legL: 0,
+    legR: 0,
+  };
+
+  const poseTarget = (S) => {
+    const p = {
+      sy: 1,
+      sx: 1,
+      headY: 2.2,
+      headZ: 0.15,
+      headX: 0,
+      roll: 0,
+      legS: 1,
+      lean: 0,
+      tailA: 0.2,
+      wrap: 0,
+      puff: 1,
+    };
+    switch (S.pose) {
+      case "loaf":
+        Object.assign(p, {
+          sy: 0.82,
+          headY: 1.85,
+          legS: 0.4,
+          tailA: 0.1,
+          wrap: -0.3,
+        });
+        break;
+      case "sleep":
+        Object.assign(p, {
+          sy: 0.45,
+          sx: 1.15,
+          headY: 1.0,
+          headZ: 0.85,
+          headX: 0.35,
+          roll: 0.5,
+          legS: 0.15,
+          tailA: 0.04,
+          wrap: -0.45,
+        });
+        break;
+      case "groom":
+        Object.assign(p, { headY: 2.1, roll: -0.2 });
+        break;
+      case "stretch":
+        Object.assign(p, { lean: 0.42, sy: 0.9, headY: 2.15, tailA: 0.32 });
+        break;
+      case "hang":
+        Object.assign(p, { sy: 1.1, headY: 2.45, tailA: 0.02 });
+        break;
+      default:
+        break;
+    }
+    if (S.petting) {
+      p.headY -= 0.08;
+      p.roll += 0.15;
+      p.tailA = 0.3;
+    }
+    if (S.mood === "angry") {
+      p.puff = 1.1;
+      p.tailA = 0.3;
+    }
+    if (S.mood === "happy" || S.mood === "love" || S.mood === "shock")
+      p.tailA = 0.3;
+    return p;
+  };
+
+  const update = (S, t, dt) => {
+    if (S.T3 !== appliedTheme) applyTheme(S.T3);
+    const kc = 1 - Math.exp(-dt * 5);
+    const k = 1 - Math.exp(-dt * 10);
+    const kp = 1 - Math.exp(-dt * 6);
+    envMats.forEach((m) => {
+      m.envMapIntensity = lerp(m.envMapIntensity, S.dark ? 0.45 : 0.6, kc);
+    });
+    COLORS.forEach((n) => mats[n].color.lerp(targets[n], kc));
+    ["fur", "belly", "muzzle", "earIn"].forEach((n) =>
+      mats[n].sheenColor.lerp(L.sheen, kc),
+    );
+    hemi.color.lerp(L.hemiSky, kc);
+    hemi.groundColor.lerp(L.hemiGround, kc);
+    key.color.lerp(L.key, kc);
+    rim.color.lerp(L.rim, kc);
+    hemi.intensity = lerp(hemi.intensity, L.hemiI, kc);
+    key.intensity = lerp(key.intensity, L.keyI, kc);
+    rim.intensity = lerp(rim.intensity, L.rimI, kc);
+    mats.iris.emissive.copy(mats.iris.color);
+    mats.iris.emissiveIntensity = lerp(
+      mats.iris.emissiveIntensity,
+      L.eyeGlow,
+      kc,
+    );
+    mats.collar.emissive.copy(mats.collar.color);
+    mats.collar.emissiveIntensity = lerp(
+      mats.collar.emissiveIntensity,
+      S.dark ? 0.6 : 0,
+      kc,
+    );
+    mats.orb.emissive.copy(mats.orb.color);
+    mats.orb.emissiveIntensity = S.dark ? 0.9 : 0.25;
+    mats.bell.emissive.copy(mats.bell.color);
+    mats.bell.emissiveIntensity = S.dark ? 0.6 : 0.05;
+
+    const { mood, sleeping, petting, dragging, hovered, eyeMode } = S;
+    const shock = mood === "shock",
+      angry = mood === "angry",
+      happy = mood === "happy" || mood === "love" || petting;
+    const speed = Math.abs(S.speed);
+    const moving = speed > 25 && S.pose === "stand" && !dragging;
+    const breath = Math.sin(t * (sleeping ? 1.4 : 2.4));
+
+    if (speed > 25) F.dir = Math.sign(S.speed);
+    const yawT = moving
+      ? F.dir * 0.45
+      : S.pose === "sleep"
+        ? 0
+        : S.lookX * 0.25;
+    F.yaw = lerp(F.yaw, yawT, 1 - Math.exp(-dt * 5));
+    yaw.rotation.y = F.yaw + S.turn;
+    flip.rotation.z = S.spin;
+
+    const pt = poseTarget(S);
+    Object.keys(pt).forEach((n) => {
+      cur[n] = lerp(cur[n], pt[n], kp);
+    });
+
+    const ampT = moving
+      ? Math.min(1, speed / 60) * (speed > 240 ? 1.5 : 1) * 0.7
+      : 0;
+    Wk.amp = lerp(Wk.amp, ampT, 1 - Math.exp(-dt * 8));
+    if (moving) Wk.phase += dt * Math.min(speed, 400) * 0.11;
+    const ph = Wk.phase,
+      A = Wk.amp;
+
+    cat.position.y = -1.6 + Math.abs(Math.sin(ph)) * A * 0.55;
+    cat.position.x = petting ? Math.sin(t * 50) * 0.012 : 0;
+    cat.rotation.z =
+      Math.sin(ph) * A * 0.22 + (mood === "dizzy" ? Math.sin(t * 5) * 0.1 : 0);
+    cat.rotation.x = cur.lean;
+
+    body.scale.set(
+      cur.sx * cur.puff,
+      cur.sy * (1 + breath * 0.012),
+      cur.sx * cur.puff,
+    );
+
+    let lL = Math.sin(ph) * A * 1.0,
+      lR = Math.sin(ph + Math.PI) * A * 1.0;
+    if (S.pose === "groom") lR = -2.3 + Math.sin(t * 9) * 0.2;
+    if (dragging) {
+      lL = 0.2 + Math.sin(t * 6) * 0.25;
+      lR = 0.2 + Math.sin(t * 6 + 1.5) * 0.25;
+    }
+    cur.legL = lerp(cur.legL, lL, k);
+    cur.legR = lerp(cur.legR, lR, k);
+    legF[-1].rotation.x = cur.legL;
+    legF[1].rotation.x = cur.legR;
+    legF[-1].scale.y = cur.legS;
+    legF[1].scale.y = S.pose === "groom" ? 1 : cur.legS;
+
+    let hx = S.lookY * 0.3,
+      hy = S.lookX * 0.5,
+      hz = cur.roll;
+    if (sleeping) {
+      hx = 0.35;
+      hy = 0;
+    }
+    if (petting) hz += Math.sin(t * 3) * 0.1;
+    if (mood === "sneeze") hx = -0.35 * Math.max(0, Math.sin(t * 16)) + 0.15;
+    if (dragging) hz += Math.sin(t * 6) * 0.1;
+    if (S.pose === "groom") hx = 0.3;
+    head.position.set(
+      cur.headX + (petting ? Math.sin(t * 50) * 0.015 : 0),
+      cur.headY + breath * 0.012 + Math.abs(Math.sin(ph)) * A * 0.12,
+      cur.headZ,
+    );
+    head.rotation.x = lerp(head.rotation.x, hx, k);
+    head.rotation.y = lerp(head.rotation.y, hy, k);
+    head.rotation.z = lerp(head.rotation.z, hz, k);
+
+    let eL = 0.28,
+      eR = -0.28;
+    if (sleeping || petting) {
+      eL = 0.9;
+      eR = -0.9;
+    } else if (angry || dragging) {
+      eL = 1.2;
+      eR = -1.2;
+    } else if (hovered || shock) {
+      eL = 0.1;
+      eR = -0.1;
+    }
+    if (S.twitch === "l") eL += Math.sin(t * 40) * 0.2;
+    if (S.twitch === "r") eR += Math.sin(t * 40) * 0.2;
+    cur.earL = lerp(cur.earL, eL, k);
+    cur.earR = lerp(cur.earR, eR, k);
+    earL.rotation.z = cur.earL;
+    earR.rotation.z = cur.earR;
+
+    cur.blink = lerp(cur.blink, S.blinking ? 0.08 : 1, 1 - Math.exp(-dt * 40));
+    const open = eyeMode === "open" || eyeMode === "dizzy";
+    eyes.forEach((e) => {
+      e.eye.visible = open;
+      e.arc.visible = eyeMode === "joy" || eyeMode === "sleep";
+      e.arc.rotation.z = eyeMode === "sleep" ? Math.PI : 0;
+      e.arc.position.y = e.y + (eyeMode === "sleep" ? 0.12 : -0.08);
+      e.brow.visible = angry;
+      const s2 = shock ? 1.1 : 1;
+      e.eye.scale.set(s2, s2 * cur.blink, s2);
+      e.pupil.scale.set(
+        shock ? 0.09 : S.dark ? 0.2 : 0.17,
+        shock ? 0.13 : S.dark ? 0.25 : 0.22,
+        0.06,
+      );
+      if (eyeMode === "dizzy")
+        e.pupilG.position.set(Math.cos(t * 9) * 0.1, Math.sin(t * 9) * 0.1, 0);
+      else e.pupilG.position.set(S.lookX * 0.08, -S.lookY * 0.08, 0);
+    });
+
+    Object.entries(mv).forEach(([n, g]) => (g.visible = n === S.mouth));
+    tongue.position.y = -0.2 + Math.sin(t * 14) * 0.03;
+    whiskers.forEach((w, i) => {
+      w.rotation.x = happy ? Math.sin(t * 6 + i) * 0.08 : 0;
+    });
+
+    let tAmp = 0.12,
+      tF = 1.3;
+    if (sleeping) tAmp = 0.02;
+    else if (dragging) {
+      tAmp = 0.5;
+      tF = 5;
+    } else if (angry) {
+      tAmp = 0.6;
+      tF = 14;
+    } else if (petting) {
+      tAmp = 0.45;
+      tF = 3;
+    } else if (happy || hovered) {
+      tAmp = 0.35;
+      tF = 3.2;
+    } else if (moving) {
+      tAmp = 0.22;
+      tF = 2.2;
+    }
+    cur.tailAmp = lerp(cur.tailAmp, tAmp, kp);
+    tailSegs.forEach((g, i) => {
+      g.rotation.z = cur.tailA * (0.8 + i * 0.05);
+      g.rotation.y =
+        cur.wrap + Math.sin(t * tF - i * 0.55) * cur.tailAmp * (0.3 + i * 0.1);
+      const ts = lerp(g.scale.y, angry ? 1.7 : 1, kc);
+      g.scale.y = ts;
+      g.scale.z = ts;
+    });
+
+    // bell hangs from collar — always on, subtle sway
+    cur.sBell = lerp(cur.sBell, 1, kc);
+    bellGroup.scale.setScalar(Math.max(0.001, cur.sBell));
+    bellGroup.rotation.z = Math.sin(t * 1.4) * 0.08 + Math.sin(ph) * A * 0.25;
+    bellGroup.rotation.x = Math.sin(t * 1.1) * 0.05;
+
+    orbs.forEach(({ m, i }) => {
+      const a = t * (S.dark ? 0.7 : 0.5) + (i * Math.PI * 2) / 3;
+      m.position.set(
+        Math.cos(a) * 2.1,
+        2.5 + Math.sin(t * 1.3 + i) * 0.4 + i * 0.25,
+        Math.sin(a) * 1.0,
+      );
+      m.rotation.y = t * 2;
+      m.rotation.x = t;
+      m.scale.setScalar(sleeping ? 0.5 : 1 + Math.sin(t * 3 + i) * 0.2);
+    });
+
+    const lifted = clamp(1 + S.lift / 320, 0.45, 1);
+    shadow.scale.set(3.6 * lifted * cur.sx, 1.8 * lifted, 1);
+    shadow.material.opacity = (S.dark ? 0.6 : 0.4) * lifted;
+    return F.dir;
+  };
+
+  const dispose = () => {
+    root.traverse((o) => {
+      if (o.geometry && o.geometry !== SPH) o.geometry.dispose();
+    });
+    SPH.dispose();
+    shTex.dispose();
+    Object.values(mats).forEach((m) => m.dispose());
+  };
+
+  return { root, update, dispose };
+}
+
+/* ================= Component ================= */
+export default function PetBuddy() {
+  const dark = useIsDark();
+  const UIt = dark ? UI.dark : UI.light;
+
+  const [ready, setReady] = useState(false);
+  const [scale, setScale] = useState(0.7);
+  const [isTouch, setIsTouch] = useState(false);
+  const [webglFail, setWebglFail] = useState(false);
+  const [mood, setMood] = useState("idle");
+  const [message, setMessage] = useState(null);
+  const [fx, setFx] = useState([]);
+  const [impact, setImpact] = useState(null);
+  const [sleeping, setSleeping] = useState(false);
+  const [petting, setPetting] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [blinking, setBlinking] = useState(false);
+  const [twitch, setTwitch] = useState(null);
+  const [yawn, setYawn] = useState(false);
+  const [landing, setLanding] = useState(false);
+  const [treat, setTreat] = useState(null);
+  const [act, setAct] = useState("");
+  const [confetti, setConfetti] = useState(null);
+
+  const sc = useRef(0.7);
+  const safe = useCallback(
+    (x, y) => ({
+      x: Math.max(
+        MARGIN,
+        Math.min(window.innerWidth - W * sc.current - MARGIN, x),
+      ),
+      y: Math.max(
+        MARGIN,
+        Math.min(window.innerHeight - H * sc.current - MARGIN, y),
+      ),
+    }),
+    [],
+  );
+
+  const tx = useMotionValue(0);
+  const ty = useMotionValue(0);
+  const sx = useSpring(tx, SPRING);
+  const sy = useSpring(ty, SPRING);
+  const fallY = useMotionValue(0);
+  const hop = useMotionValue(0);
+  const spin = useMotionValue(0);
+  const turn = useMotionValue(0);
+  const squash = useMotionValue(1);
+  const squashX = useTransform(squash, (v) => 2 - v);
+  const lift = useTransform([fallY, hop], ([a, b]) => a + b);
+  const vxs = useVelocity(sx);
+  const dragMV = useMotionValue(0);
+  const swing = useSpring(
+    useTransform(
+      [vxs, dragMV],
+      ([v, d]) => Math.max(-24, Math.min(24, (v / 1800) * 24)) * d,
+    ),
+    { stiffness: 190, damping: 11 },
+  );
+  const lookX = useMotionValue(0);
+  const lookY = useMotionValue(0);
+  const lx = useSpring(lookX, LOOK);
+  const ly = useSpring(lookY, LOOK);
+
+  const buddyRef = useRef(null);
+  const canvasRef = useRef(null);
+  const lastAct = useRef(Date.now());
+  const lastPointer = useRef(Date.now());
+  const msgT = useRef(null);
+  const moodT = useRef(null);
+  const throttle = useRef({});
+  const drag = useRef({
+    active: false,
+    moved: false,
+    held: false,
+    offX: 0,
+    offY: 0,
+    sx: 0,
+    sy: 0,
+    woke: false,
+    samples: [],
+    lastDx: 0,
+    flips: [],
+  });
+  const tap = useRef({ n: 0, t: null });
+  const pet = useRef({ acc: 0, lx: 0, ly: 0, t: null, hold: null });
+  const keyBuf = useRef("");
+  const flags = useRef({});
+  const moveCtl = useRef(null);
+  const faceDir = useRef(-1);
+  const homeRef = useRef({ x: 0, y: 0 });
+  const actT = useRef(null);
+  const sessionStart = useRef(Date.now());
+  const firedMilestones = useRef(new Set());
+  const lastHour = useRef(new Date().getHours());
+
+  const pose = sleeping ? "sleep" : dragging ? "hang" : act || "stand";
+  const eyeMode = sleeping
+    ? "sleep"
+    : mood === "dizzy"
+      ? "dizzy"
+      : petting || mood === "love" || mood === "sneeze"
+        ? "joy"
+        : "open";
+  const mouth = sleeping
+    ? "idle"
+    : act === "groom" || mood === "lick"
+      ? "lick"
+      : yawn || dragging || mood === "shock" || mood === "sneeze"
+        ? "open"
+        : petting || mood === "love" || mood === "happy"
+          ? "smile"
+          : mood === "angry"
+            ? "grr"
+            : "idle";
+
+  flags.current = { sleeping, petting, hovered, dragging, landing, act };
+  const S = useRef({});
+  S.current = {
+    T3: dark ? THEME3.dark : THEME3.light,
+    dark,
+    pose,
+    eyeMode,
+    mouth,
+    mood,
+    sleeping,
+    petting,
+    dragging,
+    hovered,
+    blinking,
+    twitch,
+  };
+
+  /* ---------- helpers ---------- */
+  const say = useCallback((m, d = 2200) => {
+    clearTimeout(msgT.current);
+    setMessage(m);
+    msgT.current = setTimeout(() => setMessage(null), d);
+  }, []);
+  const feel = useCallback((m, d = 1400) => {
+    clearTimeout(moodT.current);
+    setMood(m);
+    moodT.current = setTimeout(() => setMood("idle"), d);
+  }, []);
+  const once = useCallback((name, ms) => {
+    const now = Date.now();
+    if (now - (throttle.current[name] || 0) < ms) return false;
+    throttle.current[name] = now;
+    return true;
+  }, []);
+  const spawn = useCallback((emojis, n, { rise = false, spread = 80 } = {}) => {
+    const base = Date.now() + Math.random();
+    const items = Array.from({ length: n }, (_, i) => ({
+      id: base + i,
+      e: pick(emojis),
+      a: (i / n) * Math.PI * 2 + Math.random() * 0.6,
+      d: spread * (0.6 + Math.random() * 0.7),
+      dx: (Math.random() - 0.5) * 70,
+      rise,
+    }));
+    setFx((f) => [...f, ...items]);
+    setTimeout(() => setFx((f) => f.filter((o) => !items.includes(o))), 1700);
+  }, []);
+  const boing = useCallback(
+    (a = 0.86) =>
+      animate(squash, [1, a, 1.07, 1], { duration: 0.45, ease: "easeOut" }),
+    [squash],
+  );
+  const jump = useCallback(
+    (h = 30) => {
+      animate(hop, [0, -h, 0], { duration: 0.44, ease: ["easeOut", "easeIn"] });
+      boing(0.9);
+    },
+    [hop, boing],
+  );
+  const wake = useCallback(() => {
+    lastAct.current = Date.now();
+    clearTimeout(actT.current);
+    setAct("");
+    if (flags.current.sleeping) {
+      setSleeping(false);
+      feel("shock", 700);
+      say("Mew! 🐱", 1600);
+      jump(16);
+    }
+  }, [feel, say, jump]);
+
+  /* ---------- act (in-place) ---------- */
+  const doAct = useCallback((name, ms) => {
+    clearTimeout(actT.current);
+    setAct(name);
+    if (ms) actT.current = setTimeout(() => setAct(""), ms);
   }, []);
 
-  /* Init + fall */
+  /* ---------- walk to treat ---------- */
+  const walkTo = useCallback(
+    (px, py) => {
+      const c = safe(px - (W * sc.current) / 2, py - H * sc.current * 0.7);
+      wake();
+      setSleeping(false);
+      clearTimeout(actT.current);
+      setAct("");
+      moveCtl.current?.stop();
+      const cx = tx.get();
+      const cy = ty.get();
+      const dx = c.x - cx;
+      const dy = c.y - cy;
+      const dist = Math.hypot(dx, dy);
+      if (dist < 8) {
+        setTreat(null);
+        feel("happy", 1800);
+        say(pick(YUM), 2000);
+        spawn(["💖", "😋", "✨"], 6, { rise: true });
+        jump(26);
+        return;
+      }
+      const dur = Math.max(0.6, dist / 260);
+      setMood("zoom");
+      say("Fish!! 🐟", 1200);
+      const ctlX = animate(tx, c.x, { duration: dur, ease: "easeInOut" });
+      const ctlY = animate(ty, c.y, { duration: dur, ease: "easeInOut" });
+      moveCtl.current = {
+        stop: () => {
+          ctlX.stop();
+          ctlY.stop();
+        },
+      };
+      ctlX.then(() => {
+        setMood("idle");
+        setTreat(null);
+        setYawn(true);
+        setTimeout(() => setYawn(false), 600);
+        feel("happy", 1800);
+        say(pick(YUM), 2000);
+        spawn(["💖", "😋", "✨"], 6, { rise: true });
+        jump(26);
+        homeRef.current = { x: tx.get(), y: ty.get() };
+        try {
+          localStorage.setItem(
+            KEY,
+            JSON.stringify({ x: tx.get(), y: ty.get() }),
+          );
+        } catch {
+          /* ignore */
+        }
+      });
+    },
+    [safe, tx, ty, wake, feel, say, jump, spawn],
+  );
+
+  const dropTreat = useCallback(
+    (px, py) => {
+      if (flags.current.dragging || flags.current.landing) return;
+      setTreat({ id: Date.now(), x: px, y: py });
+      walkTo(px, py);
+    },
+    [walkTo],
+  );
+
+  const randomTreat = useCallback(() => {
+    const px = 80 + Math.random() * Math.max(80, window.innerWidth - 160);
+    const py = 100 + Math.random() * Math.max(80, window.innerHeight - 200);
+    dropTreat(px, py);
+  }, [dropTreat]);
+
+  /* ---------- 3D renderer ---------- */
   useEffect(() => {
-    const touch = window.matchMedia("(hover: none), (pointer: coarse)").matches;
-    setIsTouch(touch);
-
-    let init = null;
+    if (!ready || !canvasRef.current) return;
+    let renderer, raf, cat;
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) init = JSON.parse(saved);
+      renderer = new THREE.WebGLRenderer({
+        canvas: canvasRef.current,
+        alpha: true,
+        antialias: true,
+      });
     } catch {
-      ("");
+      setWebglFail(true);
+      return;
+    }
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(CW, CH, false);
+    renderer.setClearColor(0x000000, 0);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.2;
+    const scene = new THREE.Scene();
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    scene.environment = envTex;
+    const camera = new THREE.PerspectiveCamera(28, CW / CH, 0.1, 60);
+    camera.position.set(0, 2.4, 9.2);
+    camera.lookAt(0, 1.85, 0);
+    cat = buildCat();
+    scene.add(cat.root);
+    let last = performance.now();
+    const loop = (now) => {
+      raf = requestAnimationFrame(loop);
+      if (document.hidden) {
+        last = now;
+        return;
+      }
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      faceDir.current = cat.update(
+        {
+          ...S.current,
+          lookX: lx.get(),
+          lookY: ly.get(),
+          speed: vxs.get(),
+          lift: lift.get(),
+          spin: (spin.get() * Math.PI) / 180,
+          turn: (turn.get() * Math.PI) / 180,
+        },
+        now / 1000,
+        dt,
+      );
+      renderer.render(scene, camera);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => {
+      cancelAnimationFrame(raf);
+      envTex.dispose();
+      pmrem.dispose();
+      cat.dispose();
+      renderer.dispose();
+      renderer.forceContextLoss?.();
+    };
+  }, [ready, lx, ly, spin, turn, vxs, lift]);
+
+  /* ---------- init + fall + welcome ---------- */
+  useEffect(() => {
+    const isMobile = window.innerWidth < 640;
+    sc.current = isMobile ? 0.4 : 0.7;
+    setScale(sc.current);
+    setIsTouch(window.matchMedia("(hover: none)").matches);
+
+    let st = { day: "", count: 1 };
+    try {
+      st = { ...st, ...JSON.parse(localStorage.getItem(STREAK_KEY)) };
+    } catch {
+      /* ignore */
+    }
+    const today = new Date().toDateString();
+    let streakMsg = null;
+    if (st.day !== today) {
+      const y = new Date();
+      y.setDate(y.getDate() - 1);
+      st.count =
+        st.day === y.toDateString() ? (st.count || 1) + 1 : st.day ? 1 : 1;
+      st.day = today;
+      if (st.count > 1) streakMsg = `Day ${st.count} together! 🔥`;
+      else if (st.day) streakMsg = "I missed you 🥹";
+    }
+    try {
+      localStorage.setItem(STREAK_KEY, JSON.stringify(st));
+    } catch {
+      /* ignore */
     }
 
-    if (!init || typeof init.x !== "number" || typeof init.y !== "number") {
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      init = { x: w - SIZE - 40, y: h - SIZE - 140 };
+    let s = null;
+    try {
+      s = JSON.parse(localStorage.getItem(KEY));
+    } catch {
+      /* ignore */
     }
-
-    const clamped = safeTarget(init.x, init.y);
-    x.set(clamped.x);
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const pos =
+      s && typeof s.x === "number" && typeof s.y === "number"
+        ? s
+        : { x: w - W * sc.current - 16, y: h - H * sc.current - 24 };
+    const c = safe(pos.x, pos.y);
+    tx.set(c.x);
+    ty.set(c.y);
+    sx.jump(c.x);
+    sy.jump(c.y);
+    homeRef.current = { x: c.x, y: c.y };
     setReady(true);
 
-    const hasFallen = sessionStorage.getItem(FALL_SESSION_KEY) === "1";
-
-    if (hasFallen) {
-      y.set(clamped.y);
+    let fell = false;
+    try {
+      fell = sessionStorage.getItem(FALL_KEY) === "1";
+    } catch {
+      /* ignore */
+    }
+    if (fell || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setTimeout(() => say(streakMsg || greetingForNow(), 3600), 900);
       return;
     }
 
-    const START_Y = -SIZE - 80;
-    const DURATION = 950;
-
-    const easeOutBounce = (t) => {
-      const n1 = 7.5625;
-      const d1 = 2.75;
-      if (t < 1 / d1) return n1 * t * t;
-      if (t < 2 / d1) {
-        t -= 1.5 / d1;
-        return n1 * t * t + 0.75;
-      }
-      if (t < 2.5 / d1) {
-        t -= 2.25 / d1;
-        return n1 * t * t + 0.9375;
-      }
-      t -= 2.625 / d1;
-      return n1 * t * t + 0.984375;
-    };
-
-    y.set(START_Y);
+    const dur = 1.25;
+    const start = -(c.y + H + 160);
+    fallY.set(start);
     setLanding(true);
-
-    let rafId = null;
-    let startTime = null;
-    let cancelled = false;
-
-    const step = (timestamp) => {
-      if (cancelled) return;
-      if (!startTime) startTime = timestamp;
-      const elapsed = timestamp - startTime;
-      const progress = Math.min(elapsed / DURATION, 1);
-      const eased = easeOutBounce(progress);
-      y.set(START_Y + (clamped.y - START_Y) * eased);
-
-      if (progress < 1) {
-        rafId = requestAnimationFrame(step);
-      } else {
+    const t1 = setTimeout(() => {
+      animate(fallY, [start, 0, -56, 0, -20, 0, -6, 0], {
+        duration: dur,
+        times: [0, 0.5, 0.64, 0.76, 0.86, 0.93, 0.97, 1],
+        ease: [
+          "easeIn",
+          "easeOut",
+          "easeIn",
+          "easeOut",
+          "easeIn",
+          "easeOut",
+          "easeIn",
+        ],
+      });
+    }, 150);
+    const t2 = setTimeout(
+      () => {
+        animate(squash, [1, 0.6, 1.14, 0.96, 1], { duration: 0.65 });
+        setImpact(Date.now());
+        feel("shock", 1000);
+        say("DUM!! 💥", 1300);
+        navigator.vibrate?.(40);
         try {
-          sessionStorage.setItem(FALL_SESSION_KEY, "1");
+          sessionStorage.setItem(FALL_KEY, "1");
         } catch {
-          ("");
+          /* ignore */
         }
+      },
+      150 + dur * 500,
+    );
+    const t3 = setTimeout(
+      () => {
+        setLanding(false);
+        setImpact(null);
+        say(streakMsg || greetingForNow(), 3400);
+        feel("happy", 1500);
+      },
+      150 + dur * 1000 + 400,
+    );
+    const t4 = setTimeout(() => {
+      const d = dayLine();
+      if (d) say(d, 2600);
+    }, 18000);
+    const t5 = setTimeout(() => say("Tap 🐟 to feed me!", 3500), 42000);
+    return () => {
+      [t1, t2, t3, t4, t5].forEach(clearTimeout);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-        setDustPuff(true);
-        setTimeout(() => setDustPuff(false), 550);
-        showMessage(LAND_MESSAGE, 2200);
-        setTimeout(() => setLanding(false), 500);
+  /* ---------- global listeners ---------- */
+  useEffect(() => {
+    let last = { x: 0, y: 0, t: 0 };
+    const onMove = (e) => {
+      const now = performance.now();
+      lastPointer.current = Date.now();
+      if (!buddyRef.current || flags.current.sleeping) return;
+      const r = buddyRef.current.getBoundingClientRect();
+      const dx = e.clientX - (r.left + r.width / 2);
+      const dy = e.clientY - (r.top + r.height / 2);
+      const dist = Math.hypot(dx, dy) || 1;
+      const k = Math.min(1, dist / 260);
+      lookX.set((dx / dist) * k);
+      lookY.set((dy / dist) * k);
+      const dt = now - last.t;
+      if (dt > 0 && dt < 80 && e.pointerType === "mouse") {
+        const speed =
+          (Math.hypot(e.clientX - last.x, e.clientY - last.y) / dt) * 1000;
+        if (
+          speed > 2600 &&
+          dist < 230 &&
+          !flags.current.dragging &&
+          !flags.current.landing &&
+          once("fast", 5000)
+        ) {
+          feel("shock", 900);
+          say(pick(["Whoa! 🙀", "Too fast! 💨", "Pounce?! 🐾"]), 1500);
+          jump(22);
+        }
+      }
+      last = { x: e.clientX, y: e.clientY, t: now };
+    };
+    const onScroll = () => {
+      if (flags.current.sleeping || flags.current.landing) return;
+      lookY.set(Math.random() < 0.5 ? 0.9 : -0.9);
+      if (once("scroll", 7000)) {
+        say(pick(SCROLL), 1700);
+        feel("shock", 700);
+        setTwitch("l");
+        setTimeout(() => setTwitch(null), 500);
       }
     };
-
-    const deferId = setTimeout(() => {
-      rafId = requestAnimationFrame(step);
-    }, 80);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(deferId);
-      if (rafId) cancelAnimationFrame(rafId);
+    const onKey = (e) => {
+      if (flags.current.sleeping || flags.current.landing) return;
+      lastAct.current = Date.now();
+      keyBuf.current = (keyBuf.current + (e.key || "").toLowerCase()).slice(-8);
+      const kb = keyBuf.current;
+      if (kb.endsWith("meow")) {
+        keyBuf.current = "";
+        say("MEOW!! 😻", 1800);
+        feel("love", 1800);
+        jump(36);
+        spawn(["😻", "💖", "🐾"], 8);
+        return;
+      }
+      if (kb.endsWith("party")) {
+        keyBuf.current = "";
+        say("Party time! 🥳", 3000);
+        feel("love", 3000);
+        animate(spin, [0, 720], { duration: 1.4, ease: "easeInOut" }).then(() =>
+          spin.set(0),
+        );
+        setConfetti(Date.now());
+        setTimeout(() => setConfetti(null), 2600);
+        spawn(CONFETTI, 26, { spread: 150 });
+        return;
+      }
+      if (kb.endsWith("fish")) {
+        keyBuf.current = "";
+        randomTreat();
+        return;
+      }
+      if (once("type", 14000)) {
+        say(pick(TYPE), 1800);
+        setTwitch("l");
+        setTimeout(() => setTwitch(null), 600);
+      }
     };
-  }, [x, y, safeTarget, showMessage]);
-
-  /* Cursor tracking */
-  useEffect(() => {
-    if (isTouch) return;
-    const onMove = (e) => {
-      cursorRef.current = { x: e.clientX, y: e.clientY };
+    const onClick = (e) => {
+      if (!e.altKey || e.target?.closest?.("[data-pet-buddy]")) return;
+      e.preventDefault();
+      dropTreat(e.clientX, e.clientY);
     };
-    window.addEventListener("mousemove", onMove, { passive: true });
-    return () => window.removeEventListener("mousemove", onMove);
-  }, [isTouch]);
-
-  /* Eye tracking */
-  useEffect(() => {
-    if (isTouch || landing) return;
-    const id = setInterval(() => {
-      if (!buddyRef.current || sleeping) return;
-      const rect = buddyRef.current.getBoundingClientRect();
-      const cx = rect.left + rect.width / 2;
-      const cy = rect.top + rect.height / 2;
-      const dx = cursorRef.current.x - cx;
-      const dy = cursorRef.current.y - cy;
-      const dist = Math.hypot(dx, dy) || 1;
-      const max = 3.5;
-      const intensity = Math.min(1, dist / 260);
-      setEyeOffset({
-        x: (dx / dist) * max * intensity,
-        y: (dy / dist) * max * intensity,
-      });
-    }, 55);
-    return () => clearInterval(id);
-  }, [isTouch, sleeping, landing]);
-
-  /* Clamp on resize */
-  useEffect(() => {
+    const onCopy = () => {
+      if (once("copy", 8000)) {
+        say("Copycat! 😼", 1600);
+        feel("happy", 1200);
+      }
+    };
     const onResize = () => {
-      const clamped = safeTarget(x.get(), y.get());
-      x.set(clamped.x);
-      y.set(clamped.y);
+      const isMobile = window.innerWidth < 640;
+      sc.current = isMobile ? 0.4 : 0.7;
+      setScale(sc.current);
+      const c = safe(tx.get(), ty.get());
+      tx.set(c.x);
+      ty.set(c.y);
     };
+    const onVis = () => {
+      if (document.visibilityState === "visible") {
+        lastAct.current = Date.now();
+        setSleeping(false);
+        feel("happy", 1500);
+        say("You're back! 😸", 1800);
+      } else say("Where did you go? 🥺", 1500);
+    };
+    window.addEventListener("pointermove", onMove, { passive: true });
+    window.addEventListener("scroll", onScroll, {
+      passive: true,
+      capture: true,
+    });
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("click", onClick, true);
+    window.addEventListener("copy", onCopy);
     window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, [x, y, safeTarget]);
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("scroll", onScroll, { capture: true });
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("click", onClick, true);
+      window.removeEventListener("copy", onCopy);
+      window.removeEventListener("resize", onResize);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [
+    lookX,
+    lookY,
+    tx,
+    ty,
+    safe,
+    say,
+    feel,
+    jump,
+    once,
+    spawn,
+    spin,
+    dropTreat,
+    randomTreat,
+  ]);
 
-  /* Blink */
+  useEffect(() => {
+    if (sleeping) {
+      lookX.set(0);
+      lookY.set(0.35);
+    }
+  }, [sleeping, lookX, lookY]);
+
+  /* ---------- time awareness: hour + milestones ---------- */
+  useEffect(() => {
+    const id = setInterval(() => {
+      const f = flags.current;
+      const h = new Date().getHours();
+      if (h !== lastHour.current) {
+        lastHour.current = h;
+        if (!f.dragging && !f.landing) {
+          setSleeping(false);
+          say(hourLine(h), 3200);
+          feel("happy", 1600);
+          jump(20);
+        }
+      }
+      const elapsed = Date.now() - sessionStart.current;
+      for (const m of MILESTONES) {
+        if (elapsed >= m.ms && !firedMilestones.current.has(m.ms)) {
+          firedMilestones.current.add(m.ms);
+          if (!f.landing) {
+            say(m.msg, 3500);
+            feel("love", 2000);
+            spawn(CONFETTI, 8, { spread: 100 });
+          }
+        }
+      }
+    }, 30000);
+    return () => clearInterval(id);
+  }, [say, feel, jump, spawn]);
+
+  /* ---------- blink ---------- */
   useEffect(() => {
     let t;
     const loop = () => {
-      if (!sleeping && !landing) {
+      if (!flags.current.sleeping) {
         setBlinking(true);
-        setTimeout(() => setBlinking(false), 140);
+        setTimeout(() => setBlinking(false), 130);
       }
-      t = setTimeout(loop, 2200 + Math.random() * 3800);
+      t = setTimeout(loop, 2000 + Math.random() * 3600);
     };
     t = setTimeout(loop, 1500);
     return () => clearTimeout(t);
-  }, [sleeping, landing]);
+  }, []);
 
-  /* Idle sparkles */
+  /* ---------- POSE PROGRESSION: sit → loaf → sleep ---------- */
   useEffect(() => {
-    if (sleeping || isTouch || landing) return;
     const id = setInterval(() => {
-      if (Math.random() < 0.5) {
-        setSparkle(true);
-        setTimeout(() => setSparkle(false), 1400);
-      }
-    }, 7000);
-    return () => clearInterval(id);
-  }, [sleeping, isTouch, landing]);
-
-  /* Idle messages */
-  useEffect(() => {
-    if (sleeping || dragging || landing) return;
-    const id = setInterval(() => {
-      if (Date.now() - lastInteraction.current < IDLE_MSG_INTERVAL) return;
-      if (Math.random() < 0.55) {
-        const msg =
-          IDLE_MESSAGES[Math.floor(Math.random() * IDLE_MESSAGES.length)];
-        showMessage(msg);
-      }
-    }, 5000);
-    return () => clearInterval(id);
-  }, [sleeping, dragging, showMessage, landing]);
-
-  /* Sleep detection */
-  useEffect(() => {
-    if (landing) return;
-    const id = setInterval(() => {
-      if (dragging || hovered) {
-        lastInteraction.current = Date.now();
-        if (sleeping) setSleeping(false);
+      const f = flags.current;
+      if (f.dragging || f.hovered || f.petting || f.landing) {
+        lastAct.current = Date.now();
         return;
       }
-      if (Date.now() - lastInteraction.current > SLEEP_TIMEOUT && !sleeping) {
+      if (document.hidden) return;
+      const idleFor = Date.now() - lastAct.current;
+      if (f.act && f.act !== "loaf") return;
+      if (!f.sleeping && idleFor > SLEEP_MS) {
         setSleeping(true);
-        showMessage(SLEEP_MESSAGE, 4000);
+        clearTimeout(actT.current);
+        setAct("");
+        const h = new Date().getHours();
+        say(h >= 21 || h < 5 ? "Good night... Zzz 🌙💤" : "Zzz... 💤", 4000);
+        return;
+      }
+      if (!f.sleeping && f.act !== "loaf" && idleFor > LOAF_MS) {
+        doAct("loaf", 0);
       }
     }, 2000);
     return () => clearInterval(id);
-  }, [dragging, hovered, sleeping, showMessage, landing]);
+  }, [say, doAct]);
 
-  const wake = useCallback(() => {
-    lastInteraction.current = Date.now();
-    if (sleeping) {
-      setSleeping(false);
-      showMessage(WAKE_MESSAGE, 1600);
+  /* ---------- in-place idle activities (NO walking) ---------- */
+  useEffect(() => {
+    const id = setInterval(() => {
+      const f = flags.current;
+      if (f.sleeping || f.dragging || f.petting || f.landing || document.hidden)
+        return;
+      const idleFor = Date.now() - lastAct.current;
+      if (Math.random() < 0.5) {
+        setTwitch(Math.random() < 0.5 ? "l" : "r");
+        setTimeout(() => setTwitch(null), 600);
+      }
+      if (Date.now() - lastPointer.current > 5000 && Math.random() < 0.5) {
+        lookX.set((Math.random() - 0.5) * 1.6);
+        lookY.set((Math.random() - 0.5) * 0.8);
+      }
+      if (idleFor < 8000) return;
+      if (f.act && f.act !== "loaf") return;
+      if (f.act === "loaf" && Math.random() < 0.55) setAct("");
+      const r = Math.random();
+      if (r < 0.14) {
+        doAct("groom", 4200);
+        say("Grooming time 👅", 2200);
+      } else if (r < 0.26) {
+        doAct("stretch", 2600);
+        say("Stretch~ 🐈", 1800);
+      } else if (r < 0.36) {
+        setYawn(true);
+        say("Yaaawn 🥱", 1600);
+        setTimeout(() => setYawn(false), 1500);
+      } else if (r < 0.44) {
+        feel("sneeze", 700);
+        say("Achoo! 🤧", 1400);
+        spawn(["💨", "💦"], 4, { spread: 50 });
+      } else if (r < 0.52) {
+        say("Brought you a gift! 🎁", 2200);
+        spawn(["🎁", "🐭", "🐟"], 3, { rise: true });
+        jump(18);
+      } else if (r < 0.6) {
+        say("Tail!! 😹", 1500);
+        animate(turn, [0, 720], { duration: 1.4, ease: "easeInOut" }).then(() =>
+          turn.set(0),
+        );
+      } else if (r < 0.72) {
+        say(pick(BANGLISH), 2000);
+      } else if (r < 0.86) {
+        say(pick(IDLE));
+      } else {
+        say(hourLine(new Date().getHours()), 2400);
+      }
+    }, 4500);
+    return () => clearInterval(id);
+  }, [say, jump, feel, spawn, turn, lookX, lookY, doAct]);
+
+  /* ---------- theme change ---------- */
+  const firstTheme = useRef(true);
+  useEffect(() => {
+    if (firstTheme.current) {
+      firstTheme.current = false;
+      return;
     }
-  }, [sleeping, showMessage]);
+    lastAct.current = Date.now();
+    setSleeping(false);
+    feel("happy", 1800);
+    say(dark ? "Lights out! 🌙" : "Good morning! ☀️", 2400);
+    spawn(dark ? ["⭐", "✨"] : ["☀️", "✨", "🌼"], 8, { spread: 100 });
+    animate(squash, [1, 0.88, 1.1, 1], { duration: 0.6 });
+  }, [dark, feel, say, spawn, squash]);
 
-  /* Drag */
-  const dragStart = useRef({ x: 0, y: 0 });
-  const dragOffset = useRef({ x: 0, y: 0 });
-  const didDrag = useRef(false);
-
-  const onPointerDown = (e) => {
-    if (e.button !== undefined && e.button !== 0) return;
-    if (landing) return;
-    e.stopPropagation();
-    wake();
-
-    const rect = buddyRef.current.getBoundingClientRect();
-    dragOffset.current = {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-    };
-    dragStart.current = { x: e.clientX, y: e.clientY };
-    didDrag.current = false;
-    setDragging(true);
-  };
-
+  /* ---------- drag chatter / petting hearts ---------- */
   useEffect(() => {
     if (!dragging) return;
-    const onMove = (e) => {
-      const dx = e.clientX - dragStart.current.x;
-      const dy = e.clientY - dragStart.current.y;
-      if (Math.hypot(dx, dy) > CLICK_DRAG_THRESHOLD) didDrag.current = true;
-
-      const newX = e.clientX - dragOffset.current.x;
-      const newY = e.clientY - dragOffset.current.y;
-      const clamped = safeTarget(newX, newY);
-      x.set(clamped.x);
-      y.set(clamped.y);
-    };
-    const onUp = () => {
-      setDragging(false);
-      if (didDrag.current) {
-        try {
-          localStorage.setItem(
-            STORAGE_KEY,
-            JSON.stringify({ x: x.get(), y: y.get() }),
-          );
-        } catch {
-          ("");
-        }
-        const msg =
-          DRAG_REACTIONS[Math.floor(Math.random() * DRAG_REACTIONS.length)];
-        showMessage(msg, 1500);
-      }
-    };
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-    window.addEventListener("pointercancel", onUp);
+    say(pick(DRAG), 1700);
+    const id = setInterval(() => {
+      if (flags.current.dragging && S.current.mood !== "dizzy")
+        say(pick(DRAG), 1700);
+    }, 1800);
+    const ctl = animate(squash, [1, 0.92, 1.05, 1], {
+      duration: 0.8,
+      repeat: Infinity,
+    });
     return () => {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      window.removeEventListener("pointercancel", onUp);
+      clearInterval(id);
+      ctl.stop();
+      squash.set(1);
     };
-  }, [dragging, x, y, safeTarget, showMessage]);
+  }, [dragging, say, squash]);
 
-  /* Click */
-  const handleClick = useCallback(
-    (e) => {
-      e.stopPropagation();
-      if (didDrag.current || landing) return;
+  useEffect(() => {
+    if (!petting) return;
+    const id = setInterval(() => {
+      spawn(["💖", "💗", "✨", "💜"], 2, { rise: true });
+      navigator.vibrate?.(12);
+      if (Math.random() < 0.3) say(pick(PET), 1800);
+    }, 650);
+    return () => clearInterval(id);
+  }, [petting, spawn, say]);
 
-      const reaction =
-        CLICK_REACTIONS[Math.floor(Math.random() * CLICK_REACTIONS.length)];
-      showMessage(reaction, 1400);
-      setClicked(true);
+  const startPet = useCallback(() => {
+    if (flags.current.petting || flags.current.dragging) return;
+    flags.current.petting = true;
+    setPetting(true);
+    wake();
+    say("Purrrrr... 😽", 2600);
+    spawn(["💖", "💗", "✨"], 5, { rise: true });
+  }, [wake, say, spawn]);
+  const endPet = useCallback(() => {
+    if (!flags.current.petting) return;
+    flags.current.petting = false;
+    setPetting(false);
+    feel("happy", 1200);
+    say("More? 😸", 1600);
+  }, [feel, say]);
 
-      const newBurst = Array.from({ length: 8 }).map((_, i) => ({
-        id: Date.now() + i,
-        emoji: EMOJI_BURST[Math.floor(Math.random() * EMOJI_BURST.length)],
-        angle: (i / 8) * Math.PI * 2 + Math.random() * 0.6,
-        distance: 55 + Math.random() * 45,
-      }));
-      setBurst(newBurst);
+  /* ---------- pointer ---------- */
+  const onPointerDown = (e) => {
+    if (e.button !== undefined && e.button !== 0) return;
+    if (flags.current.landing) return;
+    e.stopPropagation();
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    moveCtl.current?.stop();
+    const wasAsleep = flags.current.sleeping;
+    wake();
+    drag.current = {
+      active: true,
+      moved: false,
+      held: false,
+      woke: wasAsleep,
+      offX: e.clientX - sx.get(),
+      offY: e.clientY - sy.get(),
+      sx: e.clientX,
+      sy: e.clientY,
+      samples: [],
+      lastDx: 0,
+      flips: [],
+    };
+    clearTimeout(pet.current.hold);
+    pet.current.hold = setTimeout(() => {
+      if (drag.current.active && !drag.current.moved) {
+        drag.current.held = true;
+        startPet();
+      }
+    }, HOLD_MS);
+  };
 
-      clearTimeout(clickTimer.current);
-      clickTimer.current = setTimeout(() => {
-        setClicked(false);
-        setBurst([]);
-      }, 1200);
-    },
-    [showMessage, landing],
-  );
+  const onPointerMove = (e) => {
+    const d = drag.current;
+    if (d.active) {
+      if (
+        !d.moved &&
+        Math.hypot(e.clientX - d.sx, e.clientY - d.sy) > DRAG_PX
+      ) {
+        d.moved = true;
+        clearTimeout(pet.current.hold);
+        endPet();
+        flags.current.dragging = true;
+        dragMV.set(1);
+        setDragging(true);
+        feel("shock", 60000);
+      }
+      if (d.moved) {
+        const now = performance.now();
+        d.samples.push({ x: e.clientX, y: e.clientY, t: now });
+        if (d.samples.length > 6) d.samples.shift();
+        const dx = e.movementX || 0;
+        if (Math.abs(dx) > 4) {
+          const sign = Math.sign(dx);
+          if (d.lastDx && sign !== d.lastDx) d.flips.push(now);
+          d.lastDx = sign;
+          d.flips = d.flips.filter((t) => now - t < 1200);
+          if (d.flips.length >= 6 && once("dizzy", 4000)) {
+            feel("dizzy", 2600);
+            say("Too fast... 😵‍💫", 2400);
+            spawn(["💫", "😵‍💫", "🌀"], 6, { spread: 60 });
+          }
+        }
+        const c = safe(e.clientX - d.offX, e.clientY - d.offY);
+        tx.set(c.x);
+        ty.set(c.y);
+      }
+      return;
+    }
+    if (e.pointerType === "mouse" && !flags.current.landing) {
+      const p = pet.current;
+      p.acc += Math.hypot(e.clientX - p.lx, e.clientY - p.ly);
+      p.lx = e.clientX;
+      p.ly = e.clientY;
+      if (p.acc > 170) startPet();
+      clearTimeout(p.t);
+      p.t = setTimeout(() => {
+        p.acc = 0;
+        endPet();
+      }, 800);
+    }
+  };
+
+  const onPointerUp = (e) => {
+    const d = drag.current;
+    if (!d.active) return;
+    d.active = false;
+    clearTimeout(pet.current.hold);
+    e.currentTarget.releasePointerCapture?.(e.pointerId);
+
+    if (d.moved) {
+      flags.current.dragging = false;
+      dragMV.set(0);
+      setDragging(false);
+      const s = d.samples;
+      let bonk = false;
+      if (s.length >= 2) {
+        const a = s[0],
+          b = s[s.length - 1];
+        const dt = Math.max(1, b.t - a.t);
+        const vx = ((b.x - a.x) / dt) * 1000;
+        const vy = ((b.y - a.y) / dt) * 1000;
+        if (Math.hypot(vx, vy) > 1000) {
+          const raw = { x: tx.get() + vx * 0.22, y: ty.get() + vy * 0.22 };
+          const c = safe(raw.x, raw.y);
+          bonk = Math.hypot(raw.x - c.x, raw.y - c.y) > 30;
+          tx.set(c.x);
+          ty.set(c.y);
+        }
+      }
+      homeRef.current = { x: tx.get(), y: ty.get() };
+      try {
+        localStorage.setItem(KEY, JSON.stringify({ x: tx.get(), y: ty.get() }));
+      } catch {
+        /* ignore */
+      }
+      clearTimeout(moodT.current);
+      if (bonk) {
+        setMood("idle");
+        setTimeout(() => {
+          feel("shock", 900);
+          say("Bonk! 💥", 1500);
+          boing(0.7);
+          spawn(["💥", "⭐", "💫"], 6, { spread: 60 });
+          navigator.vibrate?.(30);
+        }, 280);
+      } else if (S.current.mood !== "dizzy") {
+        feel("happy", 1200);
+        say(pick(DROP), 1800);
+        spawn(["🐾", "💨"], 4, { spread: 55 });
+        boing(0.82);
+      }
+      lastAct.current = Date.now();
+      return;
+    }
+    if (d.held) {
+      endPet();
+      return;
+    }
+    if (d.woke) return;
+
+    const t = tap.current;
+    t.n += 1;
+    clearTimeout(t.t);
+    t.t = setTimeout(() => {
+      const n = t.n;
+      t.n = 0;
+      if (n === 1) {
+        say(pick(CLICK), 1500);
+        feel("happy", 1200);
+        jump(30);
+        spawn(BURST, 9);
+      } else if (n === 2) {
+        say(pick(DBL), 1800);
+        feel("love", 1800);
+        animate(spin, [0, 360], { duration: 0.8, ease: "easeInOut" }).then(() =>
+          spin.set(0),
+        );
+        jump(54);
+        spawn(["💖", "😻", "💕", "✨"], 14, { spread: 110 });
+      } else {
+        say(pick(TRIPLE), 2000);
+        feel("angry", 2200);
+        animate(squash, [1, 0.9, 1.1, 0.92, 1], { duration: 0.5 });
+        spawn(["💢", "😾", "🙀"], 7, { spread: 70 });
+      }
+    }, 260);
+  };
 
   if (!ready) return null;
 
   return (
-    <div className="pet-buddy-root">
-      {/* Ground shadow */}
-      <Motion.div
-        style={{
-          position: "fixed",
-          left: 0,
-          top: 0,
-          x: shadowX,
-          y: shadowY,
-          translateX: "-50%",
-          zIndex: 44,
-          pointerEvents: "none",
-        }}
-      >
-        <Motion.div
-          animate={{
-            scaleX: landing ? 0.4 : clicked ? 1.2 : hovered ? 1.1 : 1,
-            opacity: landing ? 0.05 : dragging ? 0.15 : 0.35,
-          }}
-          transition={{ duration: 0.4 }}
-          className="w-10 h-1.5 rounded-full bg-black blur-[3px]"
-        />
-      </Motion.div>
+    <div
+      className="pet-buddy-root"
+      style={{
+        position: "fixed",
+        inset: 0,
+        pointerEvents: "none",
+        zIndex: 9999,
+        cursor: "default",
+      }}
+    >
+      <style>{`.pb-tail{transform:rotate(45deg)} @keyframes pbBob{0%,100%{transform:translate(-50%,-50%) translateY(0)}50%{transform:translate(-50%,-50%) translateY(-6px)}}`}</style>
 
-      {/* Dust puff */}
       <AnimatePresence>
-        {dustPuff && (
+        {treat && (
           <Motion.div
-            key="dust"
+            key={treat.id}
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0, opacity: 0 }}
             style={{
               position: "fixed",
-              left: 0,
-              top: 0,
-              x: shadowX,
-              y: shadowY,
-              translateX: "-50%",
-              translateY: "-50%",
-              zIndex: 44,
+              left: treat.x,
+              top: treat.y,
+              fontSize: 30,
               pointerEvents: "none",
+              animation: "pbBob 1s ease-in-out infinite",
+              filter: "drop-shadow(0 4px 6px rgba(0,0,0,.3))",
             }}
           >
-            {[...Array(6)].map((_, i) => (
+            🐟
+          </Motion.div>
+        )}
+      </AnimatePresence>
+
+      <Motion.div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          x: sx,
+          y: sy,
+          width: W * scale,
+          height: H * scale,
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width: W,
+            height: H,
+            transform: `scale(${scale})`,
+            transformOrigin: "0 0",
+          }}
+        >
+          <Motion.div
+            animate={{
+              opacity: sleeping
+                ? UIt.glowO * 0.35
+                : hovered || petting
+                  ? UIt.glowO * 1.3
+                  : UIt.glowO,
+              scale: sleeping ? 0.85 : petting ? 1.15 : 1,
+            }}
+            transition={{ duration: 0.6 }}
+            style={{
+              position: "absolute",
+              inset: -30,
+              borderRadius: "50%",
+              background: `radial-gradient(circle, ${UIt.glow}, transparent 68%)`,
+              filter: "blur(14px)",
+            }}
+          />
+
+          <AnimatePresence>
+            {impact && (
+              <Motion.div
+                key={impact}
+                style={{
+                  position: "absolute",
+                  left: "50%",
+                  bottom: 2,
+                  width: 0,
+                  height: 0,
+                }}
+              >
+                <Motion.div
+                  initial={{ opacity: 0.85, scale: 0.2 }}
+                  animate={{ opacity: 0, scale: 4 }}
+                  transition={{ duration: 0.75, ease: "easeOut" }}
+                  style={{
+                    position: "absolute",
+                    left: -50,
+                    top: -12,
+                    width: 100,
+                    height: 24,
+                    borderRadius: "50%",
+                    border: `4px solid ${UIt.ring}`,
+                  }}
+                />
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <Motion.div
+                    key={i}
+                    initial={{ opacity: 0.8, x: 0, y: 0, scale: 0.6 }}
+                    animate={{
+                      opacity: 0,
+                      x: (i - 4.5) * 20,
+                      y: -12 - (i % 3) * 9,
+                      scale: 2,
+                    }}
+                    transition={{ duration: 0.75, ease: "easeOut" }}
+                    style={{
+                      position: "absolute",
+                      width: 14,
+                      height: 14,
+                      borderRadius: "50%",
+                      background: UIt.dust,
+                    }}
+                  />
+                ))}
+                <Motion.div
+                  initial={{ opacity: 0, scale: 0.2, rotate: -14, y: -90 }}
+                  animate={{
+                    opacity: [0, 1, 1, 0],
+                    scale: [0.2, 1.6, 1.3, 1.4],
+                    rotate: [-14, 8, -4, 0],
+                    y: -210,
+                  }}
+                  transition={{ duration: 1, times: [0, 0.2, 0.7, 1] }}
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    top: 0,
+                    translateX: "-50%",
+                    fontSize: 40,
+                    fontWeight: 900,
+                    letterSpacing: 1,
+                    color: UIt.dum,
+                    WebkitTextStroke: `2px ${UIt.stroke}`,
+                    whiteSpace: "nowrap",
+                    textShadow: "0 4px 12px rgba(0,0,0,.35)",
+                  }}
+                >
+                  DUM!
+                </Motion.div>
+              </Motion.div>
+            )}
+          </AnimatePresence>
+
+          <Motion.div
+            ref={buddyRef}
+            data-pet-buddy
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerUp}
+            onPointerEnter={(e) => {
+              if (e.pointerType !== "mouse" || flags.current.landing) return;
+              setHovered(true);
+              wake();
+            }}
+            onPointerLeave={() => setHovered(false)}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              say("Menu? Treats please! 🍣", 1800);
+              feel("happy", 1200);
+            }}
+            style={{
+              position: "absolute",
+              inset: 0,
+              y: lift,
+              rotate: swing,
+              scaleY: squash,
+              scaleX: squashX,
+              transformOrigin: "50% 60%",
+              pointerEvents: "auto",
+              touchAction: "none",
+              userSelect: "none",
+              WebkitUserSelect: "none",
+              cursor: landing ? "default" : dragging ? "grabbing" : "grab",
+            }}
+          >
+            {webglFail ? (
+              <div
+                style={{
+                  fontSize: 90,
+                  textAlign: "center",
+                  lineHeight: `${H}px`,
+                }}
+              >
+                🐱
+              </div>
+            ) : (
+              <canvas
+                ref={canvasRef}
+                style={{
+                  position: "absolute",
+                  left: (W - CW) / 2,
+                  top: H - CH + 26,
+                  width: CW,
+                  height: CH,
+                  pointerEvents: "none",
+                  cursor: "default",
+                }}
+              />
+            )}
+          </Motion.div>
+
+          {sleeping &&
+            [0, 1, 2].map((i) => (
               <Motion.div
                 key={i}
-                initial={{ opacity: 0.7, x: 0, y: 0, scale: 0.6 }}
+                initial={{ opacity: 0, x: 0, y: 0, scale: 0.6 }}
                 animate={{
-                  opacity: 0,
-                  x: (i - 2.5) * 14,
-                  y: -8 - Math.random() * 8,
-                  scale: 1.4,
+                  opacity: [0, 1, 0],
+                  x: 24 + i * 10,
+                  y: -30 - i * 20,
+                  scale: 0.9 + i * 0.35,
                 }}
-                transition={{ duration: 0.55, ease: "easeOut" }}
-                className="absolute w-2 h-2 rounded-full bg-slate-500/50"
-                style={{ left: 0, top: 0 }}
-              />
-            ))}
-          </Motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Sparkle */}
-      <AnimatePresence>
-        {sparkle && (
-          <Motion.div
-            key="sparkle"
-            style={{
-              position: "fixed",
-              left: 0,
-              top: 0,
-              x: bubbleX,
-              y: bubbleY,
-              translateX: "-50%",
-              translateY: "-100%",
-              zIndex: 46,
-              pointerEvents: "none",
-            }}
-          >
-            <Motion.div
-              initial={{ opacity: 0, y: 8, scale: 0.4 }}
-              animate={{ opacity: 1, y: -6, scale: 1 }}
-              exit={{ opacity: 0, y: -22, scale: 0.4 }}
-              transition={{ duration: 1.4, ease: "easeOut" }}
-              className="text-[18px]"
-            >
-              ✨
-            </Motion.div>
-          </Motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Cat */}
-      <Motion.div
-        data-pet-buddy
-        ref={buddyRef}
-        onPointerDown={onPointerDown}
-        onClick={handleClick}
-        onMouseEnter={() => {
-          if (landing) return;
-          setHovered(true);
-          wake();
-        }}
-        onMouseLeave={() => setHovered(false)}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.3 }}
-        style={{
-          position: "fixed",
-          left: 0,
-          top: 0,
-          width: SIZE,
-          height: SIZE,
-          x,
-          y,
-          zIndex: 45,
-          cursor: landing ? "default" : dragging ? "grabbing" : "grab",
-          userSelect: "none",
-          touchAction: "none",
-          willChange: "transform",
-        }}
-      >
-        <Motion.div
-          animate={{
-            opacity: sleeping ? 0.25 : hovered ? 0.75 : 0.55,
-            scale: sleeping ? 0.9 : 1,
-          }}
-          transition={{ duration: 0.5 }}
-          className="absolute inset-0 rounded-full blur-xl"
-          style={{
-            background:
-              "radial-gradient(circle, hsl(262 83% 65% / 0.9), transparent 70%)",
-          }}
-        />
-
-        <Motion.div
-          animate={{
-            rotate: dragging
-              ? [-30, 30, -30]
-              : hovered
-                ? [-25, 25, -25]
-                : [-12, 12, -12],
-          }}
-          transition={{
-            duration: dragging ? 0.5 : hovered ? 0.7 : 1.6,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-          style={{ transformOrigin: "left center" }}
-          className="absolute right-[-22px] top-[58%] w-8 h-2 rounded-full bg-gradient-to-r from-primary via-fuchsia-500 to-fuchsia-400 shadow-sm"
-        />
-
-        <Motion.div
-          animate={{
-            y: landing ? 0 : sleeping ? [0, -1, 0] : [0, -3, 0],
-            scaleX: landing ? [0.85, 1.15, 0.95, 1] : 1,
-            scaleY: landing ? [1.15, 0.85, 1.05, 1] : 1,
-          }}
-          transition={{
-            y: {
-              duration: sleeping ? 3.2 : 2.2,
-              repeat: landing ? 0 : Infinity,
-              ease: "easeInOut",
-            },
-            scaleX: { duration: 0.55, times: [0, 0.35, 0.7, 1] },
-            scaleY: { duration: 0.55, times: [0, 0.35, 0.7, 1] },
-          }}
-          className="relative w-full h-full"
-        >
-          <div className="absolute -top-1 left-3 w-0 h-0 border-l-[9px] border-l-transparent border-r-[9px] border-r-transparent border-b-[16px] border-b-primary drop-shadow-sm z-10" />
-          <div className="absolute -top-1 right-3 w-0 h-0 border-l-[9px] border-l-transparent border-r-[9px] border-r-transparent border-b-[16px] border-b-primary drop-shadow-sm z-10" />
-
-          <div className="absolute top-1 left-[15px] w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-b-[9px] border-b-pink-300/80 z-20" />
-          <div className="absolute top-1 right-[15px] w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-b-[9px] border-b-pink-300/80 z-20" />
-
-          <div className="relative w-full h-full rounded-[48%_48%_46%_46%] bg-gradient-to-br from-primary via-fuchsia-500 to-violet-600 shadow-lg shadow-primary/40 flex flex-col items-center justify-center overflow-visible">
-            <div className="absolute top-2 left-3 w-5 h-3 rounded-full bg-white/30 blur-[2px]" />
-
-            <div className="relative flex items-center gap-3 mb-1">
-              {[0, 1].map((i) => (
-                <div
-                  key={i}
-                  className="relative w-4 h-4 rounded-full bg-white shadow-inner flex items-center justify-center"
-                >
-                  {sleeping ? (
-                    <div className="w-3 h-[2px] rounded-full bg-slate-900/80" />
-                  ) : (
-                    <Motion.div
-                      animate={{
-                        x: eyeOffset.x,
-                        y: eyeOffset.y,
-                        scaleY: blinking ? 0.1 : 1,
-                        width: hovered ? 10 : 8,
-                        height: hovered ? 10 : 8,
-                      }}
-                      transition={{
-                        x: { type: "spring", stiffness: 500, damping: 25 },
-                        y: { type: "spring", stiffness: 500, damping: 25 },
-                        scaleY: { duration: 0.08 },
-                        width: { duration: 0.2 },
-                        height: { duration: 0.2 },
-                      }}
-                      className="rounded-full bg-slate-900"
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
-
-            <div className="w-0 h-0 border-l-[3px] border-l-transparent border-r-[3px] border-r-transparent border-t-[4px] border-t-pink-500" />
-
-            <div className="w-2.5 h-1 mt-0.5 border-b border-slate-900/60 rounded-b-full" />
-
-            <div className="absolute top-[62%] left-0 flex flex-col gap-[3px] pointer-events-none">
-              <div className="w-2.5 h-px bg-slate-900/40 -rotate-[15deg]" />
-              <div className="w-3 h-px bg-slate-900/40" />
-              <div className="w-2.5 h-px bg-slate-900/40 rotate-[15deg]" />
-            </div>
-            <div className="absolute top-[62%] right-0 flex flex-col gap-[3px] items-end pointer-events-none">
-              <div className="w-2.5 h-px bg-slate-900/40 rotate-[15deg]" />
-              <div className="w-3 h-px bg-slate-900/40" />
-              <div className="w-2.5 h-px bg-slate-900/40 -rotate-[15deg]" />
-            </div>
-
-            <div className="absolute bottom-[22%] left-[10%] w-2 h-1.5 rounded-full bg-pink-300/60 blur-[1px]" />
-            <div className="absolute bottom-[22%] right-[10%] w-2 h-1.5 rounded-full bg-pink-300/60 blur-[1px]" />
-          </div>
-        </Motion.div>
-      </Motion.div>
-
-      {/* Speech Bubble */}
-      <AnimatePresence>
-        {message && (
-          <Motion.div
-            key="bubble"
-            style={{
-              position: "fixed",
-              left: 0,
-              top: 0,
-              x: bubbleX,
-              y: bubbleY,
-              translateX: "-50%",
-              translateY: "-100%",
-              zIndex: 47,
-              pointerEvents: "none",
-            }}
-          >
-            <Motion.div
-              initial={{ opacity: 0, scale: 0.6, y: 6 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.85, y: -4 }}
-              transition={{ type: "spring", stiffness: 500, damping: 26 }}
-              className="relative px-3 py-1.5 rounded-2xl text-xs font-semibold shadow-xl whitespace-nowrap max-w-[220px] text-center border bg-card/95 backdrop-blur-md text-foreground border-border"
-            >
-              {message}
-              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 rotate-45 border-r border-b bg-card border-border" />
-            </Motion.div>
-          </Motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Emoji Burst */}
-      <AnimatePresence>
-        {burst.length > 0 && (
-          <Motion.div
-            key="burst-layer"
-            style={{
-              position: "fixed",
-              left: 0,
-              top: 0,
-              x: burstX,
-              y: burstY,
-              translateX: "-50%",
-              translateY: "-50%",
-              zIndex: 46,
-              pointerEvents: "none",
-            }}
-          >
-            {burst.map((b) => (
-              <Motion.div
-                key={b.id}
-                initial={{ opacity: 1, x: 0, y: 0, scale: 0.5 }}
-                animate={{
-                  opacity: 0,
-                  x: Math.cos(b.angle) * b.distance,
-                  y: Math.sin(b.angle) * b.distance,
-                  scale: 1.3,
-                  rotate: Math.random() * 360,
+                transition={{
+                  duration: 2.8,
+                  repeat: Infinity,
+                  delay: i * 0.9,
+                  ease: "easeOut",
                 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.9, ease: "easeOut" }}
-                className="absolute text-[20px]"
-                style={{ left: 0, top: 0 }}
+                style={{
+                  position: "absolute",
+                  right: 8,
+                  top: 16,
+                  fontWeight: 800,
+                  fontSize: 20,
+                  color: UIt.ring,
+                  pointerEvents: "none",
+                }}
               >
-                {b.emoji}
+                Z
               </Motion.div>
             ))}
-          </Motion.div>
-        )}
-      </AnimatePresence>
+
+          {fx.map((o) => (
+            <Motion.div
+              key={o.id}
+              initial={{ opacity: 1, x: 0, y: 0, scale: 0.5 }}
+              animate={
+                o.rise
+                  ? {
+                      opacity: 0,
+                      x: o.dx,
+                      y: -120 - Math.random() * 40,
+                      scale: 1.3,
+                    }
+                  : {
+                      opacity: 0,
+                      x: Math.cos(o.a) * o.d,
+                      y: Math.sin(o.a) * o.d - 20,
+                      scale: 1.4,
+                      rotate: Math.random() * 360,
+                    }
+              }
+              transition={{ duration: o.rise ? 1.4 : 1, ease: "easeOut" }}
+              style={{
+                position: "absolute",
+                left: "50%",
+                top: o.rise ? 40 : "45%",
+                fontSize: 24,
+                pointerEvents: "none",
+              }}
+            >
+              {o.e}
+            </Motion.div>
+          ))}
+
+          <AnimatePresence>
+            {confetti && (
+              <Motion.div
+                key={confetti}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  pointerEvents: "none",
+                }}
+              >
+                {Array.from({ length: 22 }).map((_, i) => (
+                  <Motion.div
+                    key={i}
+                    initial={{ x: 0, y: 0, opacity: 1, scale: 0.6 }}
+                    animate={{
+                      x: (Math.random() - 0.5) * 300,
+                      y: -Math.random() * 200 - 60,
+                      opacity: 0,
+                      scale: 1.3,
+                      rotate: Math.random() * 360,
+                    }}
+                    transition={{ duration: 1.8, ease: "easeOut" }}
+                    style={{
+                      position: "absolute",
+                      left: "50%",
+                      top: "40%",
+                      fontSize: 20,
+                    }}
+                  >
+                    {pick(CONFETTI)}
+                  </Motion.div>
+                ))}
+              </Motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Only the fish button */}
+          <div
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: "100%",
+              transform: "translateX(-50%)",
+              marginTop: 6,
+              display: "flex",
+              gap: 6,
+              alignItems: "center",
+              opacity: hovered || isTouch ? 1 : 0.85,
+              transition: "opacity .25s",
+              pointerEvents: "auto",
+              whiteSpace: "nowrap",
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              aria-label="Give a treat"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={randomTreat}
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: "50%",
+                border: `1px solid ${UIt.border}`,
+                background: UIt.bg,
+                cursor: "pointer",
+                fontSize: 16,
+                lineHeight: 1,
+                boxShadow: "0 4px 12px rgba(0,0,0,.22)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              🐟
+            </button>
+          </div>
+
+          <div
+            style={{
+              position: "absolute",
+              left: "50%",
+              bottom: "100%",
+              transform: "translateX(-50%)",
+              marginBottom: 46,
+              pointerEvents: "none",
+            }}
+          >
+            <AnimatePresence>
+              {message && (
+                <Motion.div
+                  key="bubble"
+                  initial={{ opacity: 0, scale: 0.6, y: 8 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.85, y: -4 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 26 }}
+                  style={{
+                    position: "relative",
+                    padding: "7px 14px",
+                    borderRadius: 18,
+                    fontSize: 13,
+                    fontWeight: 700,
+                    whiteSpace: "nowrap",
+                    textAlign: "center",
+                    background: UIt.bg,
+                    color: UIt.text,
+                    border: `1px solid ${UIt.border}`,
+                    boxShadow: "0 10px 28px rgba(0,0,0,.28)",
+                    maxWidth: 240,
+                  }}
+                >
+                  {message}
+                  <div
+                    className="pb-tail"
+                    style={{
+                      position: "absolute",
+                      bottom: -5,
+                      left: "50%",
+                      marginLeft: -4,
+                      width: 8,
+                      height: 8,
+                      background: UIt.bg,
+                      borderRight: `1px solid ${UIt.border}`,
+                      borderBottom: `1px solid ${UIt.border}`,
+                    }}
+                  />
+                </Motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+      </Motion.div>
     </div>
   );
 }
