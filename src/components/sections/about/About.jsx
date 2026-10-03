@@ -147,7 +147,7 @@ function SectionLabel({ children }) {
 /* ---------------- Main ---------------- */
 export default function About() {
   return (
-    <section className="relative pt-24 pb-20">
+    <section className="relative pt-8 pb-10 sm:pt-12 sm:pb-14">
       <div className="container-custom">
         {/* Header */}
         <Motion.div

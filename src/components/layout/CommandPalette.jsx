@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion as Motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -66,6 +67,12 @@ export default function CommandPalette() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!open) return;
+    document.body.classList.add("modal-open");
+    return () => document.body.classList.remove("modal-open");
+  }, [open]);
+
   const filtered = COMMANDS.filter((c) => {
     if (!query.trim()) return true;
     const q = query.toLowerCase();
@@ -82,7 +89,7 @@ export default function CommandPalette() {
     window.scrollTo({ top: y, behavior: "smooth" });
   };
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {open && (
         <>
@@ -91,34 +98,37 @@ export default function CommandPalette() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setOpen(false)}
-            className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[10000] bg-slate-950/68 backdrop-blur-md"
           />
           <Motion.div
             initial={{ opacity: 0, scale: 0.95, y: -20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -20 }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className="fixed top-[15%] left-1/2 -translate-x-1/2 z-[80] w-[92%] max-w-xl"
+            className="fixed left-1/2 top-[12%] z-[10001] w-[92%] max-w-xl -translate-x-1/2"
           >
-            <div className="glass rounded-2xl overflow-hidden shadow-2xl shadow-black/40">
-              <div className="flex items-center gap-3 px-4 py-4 border-b border-border">
-                <Search className="w-4 h-4 text-muted-foreground" />
+            <div className="glass relative overflow-hidden rounded-[1.35rem] border border-primary/25 shadow-[0_32px_100px_rgba(0,0,0,0.52),0_0_45px_rgba(139,92,246,0.16)]">
+              <div className="pointer-events-none absolute inset-x-[12%] top-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent" />
+              <div className="flex items-center gap-3 border-b border-border/80 px-4 py-4 sm:px-5">
+                <span className="grid h-8 w-8 place-items-center rounded-lg border border-primary/20 bg-primary/10">
+                  <Search className="h-4 w-4 text-primary" />
+                </span>
                 <input
                   autoFocus
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search pages, projects, commands..."
-                  className="flex-1 bg-transparent outline-none text-sm placeholder:text-muted-foreground"
+                  className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
                 />
                 <button
                   onClick={() => setOpen(false)}
-                  className="p-1 rounded hover:bg-muted transition-colors"
+                  className="rounded-lg border border-border/70 p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
-              <div className="p-2 max-h-80 overflow-y-auto">
+              <div className="max-h-80 overflow-y-auto p-2.5">
                 {filtered.length === 0 ? (
                   <div className="px-3 py-6 text-center text-sm text-muted-foreground">
                     No results for "{query}"
@@ -130,17 +140,19 @@ export default function CommandPalette() {
                       <button
                         key={c.id}
                         onClick={() => runCommand(c.id)}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-primary/10 hover:border-primary/30 border border-transparent text-left transition-all"
+                        className="group flex w-full items-center gap-3 rounded-xl border border-transparent px-3 py-3 text-left transition-all hover:border-primary/20 hover:bg-primary/[0.08]"
                       >
-                        <Icon className="w-4 h-4 text-primary shrink-0" />
-                        <span className="text-sm">{c.label}</span>
+                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-muted/80 transition-colors group-hover:bg-primary/15">
+                          <Icon className="h-4 w-4 text-primary" />
+                        </span>
+                        <span className="text-sm font-medium">{c.label}</span>
                       </button>
                     );
                   })
                 )}
               </div>
 
-              <div className="border-t border-border px-4 py-2 flex items-center justify-between text-[10px] text-muted-foreground font-mono">
+              <div className="flex items-center justify-between border-t border-border/80 px-4 py-2.5 font-mono text-[10px] text-muted-foreground">
                 <span>↑↓ navigate · ↵ select</span>
                 <span>ESC close</span>
               </div>
@@ -148,6 +160,7 @@ export default function CommandPalette() {
           </Motion.div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }

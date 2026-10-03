@@ -129,7 +129,7 @@ const LEARNING = [
 
 export default function Skills() {
   return (
-    <section id="skills" className="relative pt-24 pb-20 scroll-mt-24">
+    <section id="skills" className="relative pt-8 pb-10 sm:pt-12 sm:pb-14 scroll-mt-20">
       <div className="container-custom">
         {/* Header */}
         <Motion.div

@@ -54,6 +54,7 @@
     html {
         scroll-behavior: smooth;
         -webkit-tap-highlight-color: transparent;
+        transition: background-color 450ms ease, color 450ms ease;
     }
 
     body {
@@ -63,6 +64,7 @@
         -webkit-font-smoothing: antialiased;
         overflow-x: hidden;
         font-feature-settings: "rlig" 1, "calt" 1;
+        transition: background-color 450ms ease, color 450ms ease;
     }
 
     ::selection {
@@ -94,6 +96,7 @@
         -webkit-backdrop-filter: blur(24px) saturate(200%);
         background-color: hsl(0 0% 100% / 0.7);
         border: 1px solid hsl(214 32% 91% / 0.8);
+        transition: background-color 450ms ease, border-color 450ms ease, box-shadow 450ms ease;
     }
 
     .dark .glass {

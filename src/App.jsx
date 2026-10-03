@@ -1,15 +1,16 @@
+import { lazy, Suspense } from "react";
 import { Routes, Route } from "react-router-dom";
 
 import Navbar from "./components/layout/Navbar";
 import Footer from "./components/layout/Footer";
 import MobileBottomNav from "./components/layout/MobileBottomNav";
-import ScrollProgress from "./components/layout/ScrollProgress";
 import CommandPalette from "./components/layout/CommandPalette";
 import DotField from "./components/ui/DotField";
-import PetBuddy from "./components/ui/PetBuddy";
 
 import Home from "./pages/Home";
 import NotFound from "./pages/NotFound";
+
+const PetBuddy = lazy(() => import("./components/ui/PetBuddy"));
 
 export default function App() {
   return (
@@ -33,7 +34,6 @@ export default function App() {
       </div>
 
       <div className="relative z-10">
-        <ScrollProgress />
         <Navbar />
         <CommandPalette />
 
@@ -48,7 +48,9 @@ export default function App() {
         <MobileBottomNav />
       </div>
 
-      <PetBuddy />
+      <Suspense fallback={null}>
+        <PetBuddy />
+      </Suspense>
     </div>
   );
 }

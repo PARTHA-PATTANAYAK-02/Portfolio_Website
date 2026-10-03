@@ -5,6 +5,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Float, Grid, Html, Line, Sparkles, Text } from "@react-three/drei";
 
 import * as THREE from "three";
+import { useTheme } from "../../providers/ThemeContext";
 
 import {
   SiReact,
@@ -84,47 +85,6 @@ const TECH_STACK = [
     position: [1.0, -2.85, -0.45],
   },
 ];
-
-/* =========================================================
-   THEME
-========================================================= */
-
-function useIsDark() {
-  const [isDark, setIsDark] = useState(true);
-
-  useEffect(() => {
-    const checkTheme = () => {
-      const html = document.documentElement;
-      const body = document.body;
-
-      const dark =
-        html.classList.contains("dark") ||
-        body.classList.contains("dark") ||
-        html.getAttribute("data-theme") === "dark" ||
-        body.getAttribute("data-theme") === "dark";
-
-      setIsDark(dark);
-    };
-
-    checkTheme();
-
-    const observer = new MutationObserver(checkTheme);
-
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class", "data-theme"],
-    });
-
-    observer.observe(document.body, {
-      attributes: true,
-      attributeFilter: ["class", "data-theme"],
-    });
-
-    return () => observer.disconnect();
-  }, []);
-
-  return isDark;
-}
 
 /* =========================================================
    SCROLL PROGRESS
@@ -290,7 +250,7 @@ function RotatingArchitecture({ isMobile, isDark, scrollRef }) {
   });
 
   /* Desktop keeps node visual size; mobile shrinks noticeably */
-  const scale = isMobile ? 0.42 : 1.15;
+  const scale = isMobile ? 0.66 : 1.15;
 
   return (
     <>
@@ -1005,14 +965,17 @@ function EngineeringGrid({ isDark }) {
 
 export default function HeroScene() {
   const [isMobile, setIsMobile] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
+  const sceneRef = useRef(null);
 
   const scrollRef = useScrollProgress();
 
-  const isDark = useIsDark();
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
 
   useEffect(() => {
     const check = () => {
-      setIsMobile(window.innerWidth < 768);
+      setIsMobile(window.innerWidth < 1024);
     };
 
     check();
@@ -1024,6 +987,18 @@ export default function HeroScene() {
     };
   }, []);
 
+  useEffect(() => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsVisible(entry.isIntersecting),
+      { rootMargin: "100px" },
+    );
+    observer.observe(scene);
+    return () => observer.disconnect();
+  }, []);
+
   /* -----------------------------------------------
      Camera pulled further back + wider FOV so
      leftmost Java node never clips.
@@ -1031,8 +1006,8 @@ export default function HeroScene() {
   ----------------------------------------------- */
   const camera = useMemo(
     () => ({
-      position: [0, 0.35, isMobile ? 12 : 10],
-      fov: isMobile ? 54 : 48,
+      position: [0, 0.35, 10],
+      fov: isMobile ? 52 : 48,
       near: 0.1,
       far: 100,
     }),
@@ -1041,19 +1016,22 @@ export default function HeroScene() {
 
   return (
     <div
+      ref={sceneRef}
+      className={isMobile ? "hero-scene hero-scene-mobile" : "hero-scene"}
       style={{
         position: "absolute",
         top: 0,
         bottom: 0,
-        left: "-18%",
-        right: "-4%",
+        left: isMobile ? "0" : "-18%",
+        right: isMobile ? "0" : "-4%",
         overflow: "visible",
         pointerEvents: "auto",
       }}
     >
       <Canvas
         camera={camera}
-        dpr={[1, 1.5]}
+        dpr={isMobile ? 1 : [1, 1.25]}
+        frameloop={isVisible ? "always" : "never"}
         gl={{
           antialias: true,
           alpha: true,

@@ -2,7 +2,7 @@ import { motion as Motion } from "framer-motion";
 
 export default function SectionDivider({ label }) {
   return (
-    <div className="relative py-3 sm:py-4">
+    <div className="relative py-2 sm:py-3">
       <div className="container-custom">
         <div className="relative flex items-center gap-4">
           <Motion.div

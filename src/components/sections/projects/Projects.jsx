@@ -23,7 +23,7 @@ export default function Projects() {
     : filtered;
 
   return (
-    <section id="projects" className="relative pt-2 pb-20 scroll-mt-24">
+    <section id="projects" className="relative pt-2 pb-10 sm:pb-14 scroll-mt-20">
       <div className="container-custom">
         <Motion.div
           initial={{ opacity: 0, y: 12 }}

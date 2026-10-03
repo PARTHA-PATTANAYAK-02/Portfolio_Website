@@ -28,9 +28,8 @@ const DotField = memo(
     const mouseRef = useRef({
       x: -9999,
       y: -9999,
-      prevX: -9999,
-      prevY: -9999,
       speed: 0,
+      lastMoveTime: 0,
     });
     const rafRef = useRef(null);
     const sizeRef = useRef({ w: 0, h: 0, offsetX: 0, offsetY: 0 });
@@ -59,7 +58,7 @@ const DotField = memo(
       const glowEl = glowRef.current;
       if (!canvas) return;
       const ctx = canvas.getContext("2d", { alpha: true });
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
       let resizeTimer;
 
       function resize() {
@@ -86,6 +85,7 @@ const DotField = memo(
         };
 
         buildDots(w, h);
+        scheduleFrame();
       }
 
       function buildDots(w, h) {
@@ -119,26 +119,35 @@ const DotField = memo(
 
       function onMouseMove(e) {
         const s = sizeRef.current;
-        mouseRef.current.x = e.pageX - s.offsetX;
-        mouseRef.current.y = e.pageY - s.offsetY;
-      }
-
-      function updateMouseSpeed() {
         const m = mouseRef.current;
-        const dx = m.prevX - m.x;
-        const dy = m.prevY - m.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        m.speed += (dist - m.speed) * 0.5;
-        if (m.speed < 0.001) m.speed = 0;
-        m.prevX = m.x;
-        m.prevY = m.y;
-      }
+        const x = e.pageX - s.offsetX;
+        const y = e.pageY - s.offsetY;
+        const now = performance.now();
 
-      const speedInterval = setInterval(updateMouseSpeed, 20);
+        if (m.lastMoveTime > 0) {
+          const elapsed = Math.max(now - m.lastMoveTime, 1);
+          const distance = Math.hypot(x - m.x, y - m.y);
+          const speed = (distance * 20) / elapsed;
+          m.speed += (speed - m.speed) * 0.5;
+        }
+
+        m.x = x;
+        m.y = y;
+        m.lastMoveTime = now;
+        scheduleFrame();
+      }
 
       let frameCount = 0;
+      let lastFrameTime = 0;
 
-      function tick() {
+      function scheduleFrame() {
+        if (rafRef.current === null) {
+          rafRef.current = requestAnimationFrame(tick);
+        }
+      }
+
+      function tick(now) {
+        rafRef.current = null;
         frameCount++;
         const dots = dotsRef.current;
         const m = mouseRef.current;
@@ -146,6 +155,11 @@ const DotField = memo(
         const p = propsRef.current;
         const len = dots.length;
         const t = frameCount * 0.02;
+        const elapsed = lastFrameTime ? now - lastFrameTime : 1000 / 60;
+        lastFrameTime = now;
+
+        m.speed *= Math.pow(0.5, elapsed / 20);
+        if (m.speed < 0.001) m.speed = 0;
 
         const targetEngagement = Math.min(m.speed / 5, 1);
         engagement.current += (targetEngagement - engagement.current) * 0.06;
@@ -232,22 +246,36 @@ const DotField = memo(
 
         ctx.fill();
 
-        rafRef.current = requestAnimationFrame(tick);
+        if (
+          p.sparkle ||
+          p.waveAmplitude > 0 ||
+          (m.lastMoveTime > 0 && now - m.lastMoveTime < 1000) ||
+          engagement.current > 0.001 ||
+          glowOpacity.current > 0.001
+        ) {
+          scheduleFrame();
+        } else {
+          lastFrameTime = 0;
+        }
       }
 
       doResize();
       window.addEventListener("resize", resize);
       window.addEventListener("mousemove", onMouseMove, { passive: true });
-      rafRef.current = requestAnimationFrame(tick);
 
       rebuildRef.current = () => {
         const { w, h } = sizeRef.current;
-        if (w > 0 && h > 0) buildDots(w, h);
+        if (w > 0 && h > 0) {
+          buildDots(w, h);
+          scheduleFrame();
+        }
       };
 
       return () => {
-        cancelAnimationFrame(rafRef.current);
-        clearInterval(speedInterval);
+        if (rafRef.current !== null) {
+          cancelAnimationFrame(rafRef.current);
+          rafRef.current = null;
+        }
         clearTimeout(resizeTimer);
         window.removeEventListener("resize", resize);
         window.removeEventListener("mousemove", onMouseMove);

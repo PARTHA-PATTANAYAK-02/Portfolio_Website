@@ -487,9 +487,10 @@ export default function Contact() {
       className="
         relative
         overflow-hidden
-        scroll-mt-24
+        scroll-mt-20
         pt-4
-        pb-20
+        pb-10
+        sm:pb-14
       "
     >
       <ContactBackground />

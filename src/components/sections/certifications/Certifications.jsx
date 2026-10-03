@@ -15,7 +15,7 @@ export default function Certifications() {
   const [openCert, setOpenCert] = useState(null);
 
   return (
-    <section id="certifications" className="relative pt-2 pb-20 scroll-mt-24">
+    <section id="certifications" className="relative pt-2 pb-10 sm:pb-14 scroll-mt-20">
       <div className="container-custom">
         {/* Header */}
         <Motion.div

@@ -19,7 +19,7 @@ export default function Journey() {
   });
 
   return (
-    <section id="journey" className="relative pt-2 pb-20 scroll-mt-24">
+    <section id="journey" className="relative pt-2 pb-10 sm:pb-14 scroll-mt-20">
       <div className="container-custom">
         {/* Header */}
         <Motion.div

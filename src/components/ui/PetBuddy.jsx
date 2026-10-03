@@ -10,6 +10,7 @@ import {
 } from "framer-motion";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+import { useTheme } from "../providers/ThemeContext";
 
 /* ================= Config ================= */
 const W = 170;
@@ -157,22 +158,41 @@ const MILESTONES = [
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
 /* ---------- time awareness ---------- */
-function greetingForNow() {
+function greetingForNow(dark = false) {
   const d = new Date();
   const h = d.getHours();
   const day = d.getDay();
-  let base;
-  if (h >= 0 && h < 5) base = "Why are you awake? 🦉";
-  else if (h < 12) base = "Good morning! ☀️";
-  else if (h < 17) base = "Good afternoon! 🌤️";
-  else if (h < 21) base = "Good evening! 🌆";
-  else base = "Good night... Zzz 🌙💤";
+  const timeOfDay =
+    h >= 5 && h < 12
+      ? "morning"
+      : h < 17
+        ? "afternoon"
+        : h < 21
+          ? "evening"
+          : "night";
+  const greetings = dark
+    ? {
+        morning: "Good morning! The stars are fading 🌙",
+        afternoon: "Good afternoon, starlight keeper ✨",
+        evening: "Good evening! The sky looks cozy 🌌",
+        night: "Good night... let's watch the stars 🌙💤",
+      }
+    : {
+        morning: "Good morning, sunshine! ☀️",
+        afternoon: "Good afternoon! Hope your day is bright 🌤️",
+        evening: "Good evening! Golden-hour vibes 🌇",
+        night: "Good night... sweet dreams 🌙💤",
+      };
+  let base = greetings[timeOfDay];
+  if (h < 5) {
+    base = dark ? "Still up under the stars? 🦉✨" : "It's late, night owl! 🦉";
+  }
   if (day === 1) base += " Happy Monday! 💪";
   else if (day === 5) base += " TGIF! 🎉";
   else if (day === 0 || day === 6) base += " Weekend! 🎈";
   return base;
 }
-const hourLine = (h) => HOUR_MSGS[h] || greetingForNow();
+const hourLine = (h, dark) => HOUR_MSGS[h] || greetingForNow(dark);
 const dayLine = () => {
   const d = new Date().getDay();
   if (d === 1) return "Monday again... 😾";
@@ -256,81 +276,6 @@ const UI = {
     stroke: "#09090c",
   },
 };
-
-/* ================= Theme detection ================= */
-function parseLum(css) {
-  const m = css && css.match(/rgba?\(([^)]+)\)/);
-  if (!m) return null;
-  const p = m[1]
-    .split(/[ ,/]+/)
-    .filter(Boolean)
-    .map(parseFloat);
-  if (p.length >= 4 && p[3] === 0) return null;
-  return (0.2126 * p[0] + 0.7152 * p[1] + 0.0722 * p[2]) / 255;
-}
-function readDark() {
-  const d = document.documentElement;
-  const b = document.body;
-  const attrs = [
-    d.dataset.theme,
-    d.dataset.bsTheme,
-    d.dataset.mode,
-    d.getAttribute("data-color-mode"),
-    b?.dataset?.theme,
-  ];
-  if (
-    d.classList.contains("dark") ||
-    b?.classList.contains("dark") ||
-    attrs.includes("dark")
-  )
-    return true;
-  if (
-    d.classList.contains("light") ||
-    b?.classList.contains("light") ||
-    attrs.includes("light")
-  )
-    return false;
-  const cs = d.style.colorScheme;
-  if (cs === "dark") return true;
-  if (cs === "light") return false;
-  for (const el of [b, d]) {
-    if (!el) continue;
-    const lum = parseLum(getComputedStyle(el).backgroundColor);
-    if (lum !== null) return lum < 0.45;
-  }
-  return window.matchMedia("(prefers-color-scheme: dark)").matches;
-}
-function useIsDark() {
-  const [dark, setDark] = useState(readDark);
-  useEffect(() => {
-    const update = () => setDark(readDark());
-    const mo = new MutationObserver(update);
-    const opts = {
-      attributes: true,
-      attributeFilter: [
-        "class",
-        "data-theme",
-        "data-bs-theme",
-        "data-mode",
-        "data-color-mode",
-        "style",
-      ],
-    };
-    mo.observe(document.documentElement, opts);
-    if (document.body) mo.observe(document.body, opts);
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    mq.addEventListener("change", update);
-    window.addEventListener("storage", update);
-    const poll = setInterval(update, 1500);
-    return () => {
-      mo.disconnect();
-      mq.removeEventListener("change", update);
-      window.removeEventListener("storage", update);
-      clearInterval(poll);
-    };
-  }, []);
-  return dark;
-}
 
 /* ================= 3D cat (three.js) — bell now hangs from collar ================= */
 function buildCat() {
@@ -474,10 +419,10 @@ function buildCat() {
   const bellGroup = new THREE.Group();
   bellGroup.position.set(0, 1.48, 0.72);
   body.add(bellGroup);
-  const bell = ell(mats.bell, 0.085, 0.085, 0.085, 0, 0, 0, bellGroup);
+  ell(mats.bell, 0.095, 0.095, 0.095, 0, 0, 0, bellGroup);
   // tiny slit to look like a bell
   const bellSlit = new THREE.Mesh(
-    new THREE.BoxGeometry(0.09, 0.012, 0.02),
+    new THREE.BoxGeometry(0.08, 0.012, 0.02),
     mats.line,
   );
   bellSlit.position.set(0, -0.02, 0.08);
@@ -1112,16 +1057,18 @@ function buildCat() {
     Object.values(mats).forEach((m) => m.dispose());
   };
 
-  return { root, update, dispose };
+  return { root, hitTarget: cat, update, dispose };
 }
 
 /* ================= Component ================= */
 export default function PetBuddy() {
-  const dark = useIsDark();
+  const { theme } = useTheme();
+  const dark = theme === "dark";
   const UIt = dark ? UI.dark : UI.light;
 
   const [ready, setReady] = useState(false);
-  const [scale, setScale] = useState(0.7);
+  const [scale, setScale] = useState(0.58);
+  const [catHovered, setCatHovered] = useState(false);
   const [isTouch, setIsTouch] = useState(false);
   const [webglFail, setWebglFail] = useState(false);
   const [mood, setMood] = useState("idle");
@@ -1140,18 +1087,29 @@ export default function PetBuddy() {
   const [act, setAct] = useState("");
   const [confetti, setConfetti] = useState(null);
 
-  const sc = useRef(0.7);
+  const sc = useRef(0.58);
+  const wasMobile = useRef(false);
   const safe = useCallback(
-    (x, y) => ({
-      x: Math.max(
-        MARGIN,
-        Math.min(window.innerWidth - W * sc.current - MARGIN, x),
-      ),
-      y: Math.max(
-        MARGIN,
-        Math.min(window.innerHeight - H * sc.current - MARGIN, y),
-      ),
-    }),
+    (x, y) => {
+      const mobile = sc.current < 0.5;
+      const bottomInset = mobile ? 130 : MARGIN;
+      return {
+        x: Math.max(
+          MARGIN + ((CW - W) / 2) * sc.current,
+          Math.min(
+            window.innerWidth - ((CW + W) / 2) * sc.current - MARGIN,
+            x,
+          ),
+        ),
+        y: Math.max(
+          MARGIN + ((CH - H) / 2) * sc.current,
+          Math.min(
+            window.innerHeight - ((CH + H) / 2) * sc.current - bottomInset,
+            y,
+          ),
+        ),
+      };
+    },
     [],
   );
 
@@ -1182,6 +1140,7 @@ export default function PetBuddy() {
 
   const buddyRef = useRef(null);
   const canvasRef = useRef(null);
+  const catHitTest = useRef(null);
   const lastAct = useRef(Date.now());
   const lastPointer = useRef(Date.now());
   const msgT = useRef(null);
@@ -1384,7 +1343,7 @@ export default function PetBuddy() {
   /* ---------- 3D renderer ---------- */
   useEffect(() => {
     if (!ready || !canvasRef.current) return;
-    let renderer, raf, cat;
+    let renderer, raf = null, cat;
     try {
       renderer = new THREE.WebGLRenderer({
         canvas: canvasRef.current,
@@ -1395,7 +1354,7 @@ export default function PetBuddy() {
       setWebglFail(true);
       return;
     }
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
     renderer.setSize(CW, CH, false);
     renderer.setClearColor(0x000000, 0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -1405,18 +1364,35 @@ export default function PetBuddy() {
     const pmrem = new THREE.PMREMGenerator(renderer);
     const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
     scene.environment = envTex;
-    const camera = new THREE.PerspectiveCamera(28, CW / CH, 0.1, 60);
+    const camera = new THREE.PerspectiveCamera(36, CW / CH, 0.1, 60);
     camera.position.set(0, 2.4, 9.2);
     camera.lookAt(0, 1.85, 0);
     cat = buildCat();
+    cat.root.scale.setScalar(0.9);
     scene.add(cat.root);
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    catHitTest.current = (clientX, clientY) => {
+      const canvas = canvasRef.current;
+      const rect = canvas?.getBoundingClientRect();
+      if (
+        !rect ||
+        clientX < rect.left ||
+        clientX > rect.right ||
+        clientY < rect.top ||
+        clientY > rect.bottom
+      )
+        return false;
+      pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      return raycaster.intersectObject(cat.hitTarget, true).length > 0;
+    };
     let last = performance.now();
     const loop = (now) => {
+      raf = null;
+      if (document.hidden || document.body.classList.contains("modal-open")) return;
       raf = requestAnimationFrame(loop);
-      if (document.hidden) {
-        last = now;
-        return;
-      }
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
       faceDir.current = cat.update(
@@ -1434,21 +1410,41 @@ export default function PetBuddy() {
       );
       renderer.render(scene, camera);
     };
-    raf = requestAnimationFrame(loop);
+    const resume = () => {
+      if (document.hidden || document.body.classList.contains("modal-open")) {
+        if (raf !== null) cancelAnimationFrame(raf);
+        raf = null;
+        return;
+      }
+      if (raf !== null)
+        return;
+      last = performance.now();
+      raf = requestAnimationFrame(loop);
+    };
+    const modalObserver = new MutationObserver(resume);
+    modalObserver.observe(document.body, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+    document.addEventListener("visibilitychange", resume);
+    resume();
     return () => {
-      cancelAnimationFrame(raf);
+      if (raf !== null) cancelAnimationFrame(raf);
+      modalObserver.disconnect();
+      document.removeEventListener("visibilitychange", resume);
+      catHitTest.current = null;
       envTex.dispose();
       pmrem.dispose();
       cat.dispose();
       renderer.dispose();
-      renderer.forceContextLoss?.();
     };
   }, [ready, lx, ly, spin, turn, vxs, lift]);
 
   /* ---------- init + fall + welcome ---------- */
   useEffect(() => {
-    const isMobile = window.innerWidth < 640;
-    sc.current = isMobile ? 0.4 : 0.7;
+    const isMobile = window.innerWidth < 1024;
+    wasMobile.current = isMobile;
+    sc.current = isMobile ? 0.34 : 0.58;
     setScale(sc.current);
     setIsTouch(window.matchMedia("(hover: none)").matches);
 
@@ -1483,10 +1479,19 @@ export default function PetBuddy() {
     }
     const w = window.innerWidth;
     const h = window.innerHeight;
-    const pos =
-      s && typeof s.x === "number" && typeof s.y === "number"
-        ? s
-        : { x: w - W * sc.current - 16, y: h - H * sc.current - 24 };
+    const savedPositionMatchesViewport =
+      s &&
+      typeof s.x === "number" &&
+      typeof s.y === "number" &&
+      (typeof s.viewportWidth === "number"
+        ? (s.viewportWidth < 1024) === isMobile
+        : !isMobile);
+    const pos = savedPositionMatchesViewport
+      ? s
+      : {
+          x: w - W * sc.current - MARGIN,
+          y: h - H * sc.current - 24,
+        };
     const c = safe(pos.x, pos.y);
     tx.set(c.x);
     ty.set(c.y);
@@ -1502,7 +1507,7 @@ export default function PetBuddy() {
       /* ignore */
     }
     if (fell || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setTimeout(() => say(streakMsg || greetingForNow(), 3600), 900);
+      setTimeout(() => say(streakMsg || greetingForNow(dark), 3600), 900);
       return;
     }
 
@@ -1544,7 +1549,7 @@ export default function PetBuddy() {
       () => {
         setLanding(false);
         setImpact(null);
-        say(streakMsg || greetingForNow(), 3400);
+        say(streakMsg || greetingForNow(dark), 3400);
         feel("happy", 1500);
       },
       150 + dur * 1000 + 400,
@@ -1650,19 +1655,41 @@ export default function PetBuddy() {
       }
     };
     const onResize = () => {
-      const isMobile = window.innerWidth < 640;
-      sc.current = isMobile ? 0.4 : 0.7;
+      const isMobile = window.innerWidth < 1024;
+      const crossedBreakpoint = isMobile !== wasMobile.current;
+      wasMobile.current = isMobile;
+      sc.current = isMobile ? 0.34 : 0.58;
       setScale(sc.current);
-      const c = safe(tx.get(), ty.get());
+      const c = crossedBreakpoint
+        ? safe(
+            window.innerWidth - W * sc.current - MARGIN,
+            window.innerHeight - H * sc.current - 24,
+          )
+        : safe(tx.get(), ty.get());
       tx.set(c.x);
       ty.set(c.y);
+      if (crossedBreakpoint) {
+        homeRef.current = c;
+        try {
+          localStorage.setItem(
+            KEY,
+            JSON.stringify({
+              ...c,
+              viewportWidth: window.innerWidth,
+              viewportHeight: window.innerHeight,
+            }),
+          );
+        } catch {
+          /* ignore */
+        }
+      }
     };
     const onVis = () => {
       if (document.visibilityState === "visible") {
         lastAct.current = Date.now();
         setSleeping(false);
         feel("happy", 1500);
-        say("You're back! 😸", 1800);
+        say(`You're back! ${greetingForNow(dark)}`, 2600);
       } else say("Where did you go? 🥺", 1500);
     };
     window.addEventListener("pointermove", onMove, { passive: true });
@@ -1698,6 +1725,7 @@ export default function PetBuddy() {
     spin,
     dropTreat,
     randomTreat,
+    dark,
   ]);
 
   useEffect(() => {
@@ -1716,7 +1744,7 @@ export default function PetBuddy() {
         lastHour.current = h;
         if (!f.dragging && !f.landing) {
           setSleeping(false);
-          say(hourLine(h), 3200);
+          say(hourLine(h, dark), 3200);
           feel("happy", 1600);
           jump(20);
         }
@@ -1734,7 +1762,7 @@ export default function PetBuddy() {
       }
     }, 30000);
     return () => clearInterval(id);
-  }, [say, feel, jump, spawn]);
+  }, [say, feel, jump, spawn, dark]);
 
   /* ---------- blink ---------- */
   useEffect(() => {
@@ -1823,11 +1851,11 @@ export default function PetBuddy() {
       } else if (r < 0.86) {
         say(pick(IDLE));
       } else {
-        say(hourLine(new Date().getHours()), 2400);
+        say(hourLine(new Date().getHours(), dark), 2400);
       }
     }, 4500);
     return () => clearInterval(id);
-  }, [say, jump, feel, spawn, turn, lookX, lookY, doAct]);
+  }, [say, jump, feel, spawn, turn, lookX, lookY, doAct, dark]);
 
   /* ---------- theme change ---------- */
   const firstTheme = useRef(true);
@@ -1839,7 +1867,12 @@ export default function PetBuddy() {
     lastAct.current = Date.now();
     setSleeping(false);
     feel("happy", 1800);
-    say(dark ? "Lights out! 🌙" : "Good morning! ☀️", 2400);
+    say(
+      dark
+        ? "Starlight mode is on... cozy, isn't it? 🌌"
+        : "Sunshine mode is on! Let's brighten things up ☀️",
+      2800,
+    );
     spawn(dark ? ["⭐", "✨"] : ["☀️", "✨", "🌼"], 8, { spread: 100 });
     animate(squash, [1, 0.88, 1.1, 1], { duration: 0.6 });
   }, [dark, feel, say, spawn, squash]);
@@ -1893,6 +1926,7 @@ export default function PetBuddy() {
   const onPointerDown = (e) => {
     if (e.button !== undefined && e.button !== 0) return;
     if (flags.current.landing) return;
+    if (!catHitTest.current?.(e.clientX, e.clientY)) return;
     e.stopPropagation();
     e.currentTarget.setPointerCapture?.(e.pointerId);
     moveCtl.current?.stop();
@@ -1922,6 +1956,9 @@ export default function PetBuddy() {
 
   const onPointerMove = (e) => {
     const d = drag.current;
+    if (!d.active && e.pointerType === "mouse") {
+      setCatHovered(catHitTest.current?.(e.clientX, e.clientY) ?? false);
+    }
     if (d.active) {
       if (
         !d.moved &&
@@ -2000,7 +2037,15 @@ export default function PetBuddy() {
       }
       homeRef.current = { x: tx.get(), y: ty.get() };
       try {
-        localStorage.setItem(KEY, JSON.stringify({ x: tx.get(), y: ty.get() }));
+        localStorage.setItem(
+          KEY,
+          JSON.stringify({
+            x: tx.get(),
+            y: ty.get(),
+            viewportWidth: window.innerWidth,
+            viewportHeight: window.innerHeight,
+          }),
+        );
       } catch {
         /* ignore */
       }
@@ -2218,11 +2263,19 @@ export default function PetBuddy() {
             onPointerUp={onPointerUp}
             onPointerCancel={onPointerUp}
             onPointerEnter={(e) => {
-              if (e.pointerType !== "mouse" || flags.current.landing) return;
+              if (
+                e.pointerType !== "mouse" ||
+                flags.current.landing ||
+                !catHitTest.current?.(e.clientX, e.clientY)
+              )
+                return;
               setHovered(true);
               wake();
             }}
-            onPointerLeave={() => setHovered(false)}
+            onPointerLeave={() => {
+              setHovered(false);
+              setCatHovered(false);
+            }}
             onContextMenu={(e) => {
               e.preventDefault();
               say("Menu? Treats please! 🍣", 1800);
@@ -2240,7 +2293,7 @@ export default function PetBuddy() {
               touchAction: "none",
               userSelect: "none",
               WebkitUserSelect: "none",
-              cursor: landing ? "default" : dragging ? "grabbing" : "grab",
+              cursor: dragging ? "grabbing" : catHovered ? "grab" : "default",
             }}
           >
             {webglFail ? (
@@ -2262,8 +2315,8 @@ export default function PetBuddy() {
                   top: H - CH + 26,
                   width: CW,
                   height: CH,
-                  pointerEvents: "none",
-                  cursor: "default",
+                  pointerEvents: "auto",
+                  cursor: catHovered ? "grab" : "default",
                 }}
               />
             )}
