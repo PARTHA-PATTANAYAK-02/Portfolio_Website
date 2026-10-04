@@ -157,6 +157,112 @@ const MILESTONES = [
 
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
+function ThemeToggle({ isDark, toggle }) {
+  return (
+    <Motion.button
+      type="button"
+      role="switch"
+      aria-checked={isDark}
+      aria-label={`Switch to ${isDark ? "light" : "dark"} mode`}
+      title={`Switch to ${isDark ? "light" : "dark"} mode`}
+      onClick={toggle}
+      initial={false}
+      whileHover={{ y: -1.5, scale: 1.04 }}
+      whileTap="press"
+      className="relative h-10 w-[72px] shrink-0 overflow-hidden rounded-full shadow-[inset_0_2px_6px_rgba(0,0,0,0.35)] ring-1 ring-inset ring-white/25"
+    >
+      <span className="absolute inset-0 bg-gradient-to-br from-sky-300 via-sky-200 to-amber-200" />
+      <Motion.span
+        className="absolute inset-0 bg-gradient-to-br from-[#0a0f2e] via-[#1e1b4b] to-[#3b1f6e]"
+        animate={{ opacity: isDark ? 1 : 0 }}
+        transition={{ duration: 0.6 }}
+      />
+      {[
+        { left: 10, top: 9, size: 3 },
+        { left: 20, top: 22, size: 2 },
+        { left: 29, top: 11, size: 2 },
+        { left: 14, top: 28, size: 2 },
+      ].map((star, index) => (
+        <Motion.span
+          key={index}
+          aria-hidden="true"
+          className="absolute rounded-full bg-white shadow-[0_0_6px_rgba(255,255,255,0.9)]"
+          style={{
+            left: star.left,
+            top: star.top,
+            width: star.size,
+            height: star.size,
+          }}
+          animate={
+            isDark
+              ? { opacity: [0.3, 1, 0.3], scale: 1 }
+              : { opacity: 0, scale: 0 }
+          }
+          transition={
+            isDark
+              ? {
+                  duration: 2 + index * 0.4,
+                  repeat: Infinity,
+                  delay: index * 0.25,
+                }
+              : { duration: 0.3 }
+          }
+        />
+      ))}
+      <Motion.span
+        aria-hidden="true"
+        className="absolute bottom-1.5 right-2 h-3 w-7 rounded-full bg-white/90"
+        animate={{ y: isDark ? 26 : 0, opacity: isDark ? 0 : 1 }}
+        transition={{ duration: 0.5 }}
+      />
+      <Motion.span
+        aria-hidden="true"
+        className="absolute bottom-3 right-5 h-3 w-5 rounded-full bg-white/80"
+        animate={{ y: isDark ? 26 : 0, opacity: isDark ? 0 : 1 }}
+        transition={{ duration: 0.6, delay: 0.05 }}
+      />
+      <Motion.span
+        className="absolute left-1 top-1 h-8 w-8"
+        animate={{ x: isDark ? 32 : 0 }}
+        variants={{ press: { scaleX: 1.2 } }}
+        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+      >
+        <Motion.span
+          className="absolute inset-0"
+          animate={{
+            opacity: isDark ? 0 : 1,
+            rotate: isDark ? -120 : 0,
+            scale: isDark ? 0.3 : 1,
+          }}
+          transition={{ duration: 0.5 }}
+        >
+          <Motion.span
+            aria-hidden="true"
+            className="absolute -inset-1 rounded-full border-2 border-dashed border-amber-300/80"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 14, repeat: Infinity, ease: "linear" }}
+          />
+          <span className="absolute inset-0 rounded-full bg-gradient-to-br from-yellow-200 via-amber-400 to-orange-500 shadow-[0_0_18px_rgba(251,191,36,0.9),inset_0_-3px_5px_rgba(234,88,12,0.5)]" />
+        </Motion.span>
+        <Motion.span
+          className="absolute inset-0"
+          animate={{
+            opacity: isDark ? 1 : 0,
+            rotate: isDark ? 0 : 140,
+            scale: isDark ? 1 : 0.3,
+          }}
+          transition={{ duration: 0.5 }}
+        >
+          <span className="absolute inset-0 rounded-full bg-gradient-to-br from-slate-50 via-slate-200 to-slate-400 shadow-[0_0_16px_rgba(196,181,253,0.7),inset_-3px_-3px_6px_rgba(100,116,139,0.5)]" />
+          <span className="absolute left-[7px] top-[8px] h-2.5 w-2.5 rounded-full bg-slate-400/60" />
+          <span className="absolute bottom-[7px] right-[8px] h-2 w-2 rounded-full bg-slate-400/60" />
+          <span className="absolute right-[7px] top-[7px] h-1 w-1 rounded-full bg-slate-400/60" />
+        </Motion.span>
+      </Motion.span>
+    </Motion.button>
+  );
+}
+
 /* ---------- time awareness ---------- */
 function greetingForNow(dark = false) {
   const d = new Date();
@@ -1062,7 +1168,7 @@ function buildCat() {
 
 /* ================= Component ================= */
 export default function PetBuddy() {
-  const { theme } = useTheme();
+  const { theme, toggleTheme } = useTheme();
   const dark = theme === "dark";
   const UIt = dark ? UI.dark : UI.light;
 
@@ -1339,6 +1445,12 @@ export default function PetBuddy() {
     const py = 100 + Math.random() * Math.max(80, window.innerHeight - 200);
     dropTreat(px, py);
   }, [dropTreat]);
+
+  const changeTheme = () => {
+    toggleTheme();
+    say(dark ? "Sunshine time! ☀️" : "Moonlight time! 🌙", 1800);
+    feel("happy", 1200);
+  };
 
   /* ---------- 3D renderer ---------- */
   useEffect(() => {
@@ -2425,7 +2537,7 @@ export default function PetBuddy() {
             )}
           </AnimatePresence>
 
-          {/* Only the fish button */}
+          {/* Pet actions */}
           <div
             style={{
               position: "absolute",
@@ -2465,6 +2577,7 @@ export default function PetBuddy() {
             >
               🐟
             </button>
+            <ThemeToggle isDark={dark} toggle={changeTheme} />
           </div>
 
           <div

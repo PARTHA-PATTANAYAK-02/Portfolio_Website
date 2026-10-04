@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
 import {
   motion as Motion,
-  AnimatePresence,
   useMotionValue,
   useMotionTemplate,
   useSpring,
@@ -25,14 +23,13 @@ const NAV_ITEMS = [
 const SPRING = { type: "spring", stiffness: 380, damping: 30 };
 
 export default function Navbar() {
-  const { theme, toggleTheme } = useTheme();
+  const { theme } = useTheme();
   const reduce = useReducedMotion();
   const isDark = theme === "dark";
 
   const [scrolled, setScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState("home");
   const [hoveredId, setHoveredId] = useState(null);
-  const [themeWave, setThemeWave] = useState(null);
 
   // 3D tilt + cursor light (motion values => no re-render on mouse move)
   const rotX = useSpring(0, { stiffness: 160, damping: 20 });
@@ -93,24 +90,6 @@ export default function Navbar() {
     rotX.set(0);
     rotY.set(0);
   };
-
-  const changeTheme = (e) => {
-    const b = e.currentTarget.getBoundingClientRect();
-    setThemeWave({
-      id: Date.now(),
-      x: b.left + b.width / 2,
-      y: b.top + b.height / 2,
-      // wave colour = the theme we are switching TO
-      color: isDark ? "rgba(255, 208, 78, 0.28)" : "rgba(139, 92, 246, 0.30)",
-      ring: isDark ? "rgba(255, 208, 78, 0.7)" : "rgba(167, 139, 250, 0.8)",
-    });
-    toggleTheme();
-  };
-
-  const reach =
-    typeof window !== "undefined"
-      ? Math.hypot(window.innerWidth, window.innerHeight)
-      : 2000;
 
   return (
     <>
@@ -208,8 +187,6 @@ export default function Navbar() {
                   </kbd>
                 </Motion.button>
 
-                <ThemeToggle isDark={isDark} toggle={changeTheme} />
-
                 <Motion.button
                   type="button"
                   onClick={() => scrollTo("contact")}
@@ -227,47 +204,6 @@ export default function Navbar() {
         </div>
       </Motion.header>
 
-      {/* theme switch ripple */}
-      {createPortal(
-        <AnimatePresence>
-          {themeWave && (
-            <>
-              <Motion.div
-                key={`wave-${themeWave.id}`}
-                aria-hidden="true"
-                initial={{
-                  clipPath: `circle(0px at ${themeWave.x}px ${themeWave.y}px)`,
-                  opacity: 0.95,
-                }}
-                animate={{
-                  clipPath: `circle(${reach}px at ${themeWave.x}px ${themeWave.y}px)`,
-                  opacity: 0,
-                }}
-                transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
-                onAnimationComplete={() => setThemeWave(null)}
-                className="pointer-events-none fixed inset-0 z-[110] mix-blend-screen"
-                style={{
-                  background: `radial-gradient(circle at ${themeWave.x}px ${themeWave.y}px, ${themeWave.color}, transparent 64%)`,
-                }}
-              />
-              <Motion.div
-                key={`ring-${themeWave.id}`}
-                aria-hidden="true"
-                initial={{ scale: 0, opacity: 0.9 }}
-                animate={{ scale: reach / 40, opacity: 0 }}
-                transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-                className="pointer-events-none fixed z-[111] h-20 w-20 rounded-full border-2"
-                style={{
-                  left: themeWave.x - 40,
-                  top: themeWave.y - 40,
-                  borderColor: themeWave.ring,
-                }}
-              />
-            </>
-          )}
-        </AnimatePresence>,
-        document.body,
-      )}
     </>
   );
 }
@@ -338,111 +274,6 @@ function NavLink({ item, isActive, isHovered, onHover, onClick }) {
           {item.label}
         </Motion.span>
       </span>
-    </Motion.button>
-  );
-}
-
-/* ---------- Day/Night switch: sky, stars, clouds, sun <-> moon ---------- */
-function ThemeToggle({ isDark, toggle }) {
-  return (
-    <Motion.button
-      type="button"
-      role="switch"
-      aria-checked={isDark}
-      aria-label={`Switch to ${isDark ? "light" : "dark"} mode`}
-      title={`Switch to ${isDark ? "light" : "dark"} mode`}
-      onClick={toggle}
-      initial={false}
-      whileHover={{ y: -1.5, scale: 1.04 }}
-      whileTap="press"
-      className="relative h-10 w-[72px] shrink-0 overflow-hidden rounded-full shadow-[inset_0_2px_6px_rgba(0,0,0,0.35)] ring-1 ring-inset ring-white/25"
-    >
-      {/* day sky */}
-      <span className="absolute inset-0 bg-gradient-to-br from-sky-300 via-sky-200 to-amber-200" />
-      {/* night sky */}
-      <Motion.span
-        className="absolute inset-0 bg-gradient-to-br from-[#0a0f2e] via-[#1e1b4b] to-[#3b1f6e]"
-        animate={{ opacity: isDark ? 1 : 0 }}
-        transition={{ duration: 0.6 }}
-      />
-
-      {/* stars (night) */}
-      {[
-        { l: 10, t: 9, s: 3 },
-        { l: 20, t: 22, s: 2 },
-        { l: 29, t: 11, s: 2 },
-        { l: 14, t: 28, s: 2 },
-      ].map((st, i) => (
-        <Motion.span
-          key={i}
-          className="absolute rounded-full bg-white shadow-[0_0_6px_rgba(255,255,255,0.9)]"
-          style={{ left: st.l, top: st.t, width: st.s, height: st.s }}
-          animate={
-            isDark
-              ? { opacity: [0.3, 1, 0.3], scale: 1 }
-              : { opacity: 0, scale: 0 }
-          }
-          transition={
-            isDark
-              ? { duration: 2 + i * 0.4, repeat: Infinity, delay: i * 0.25 }
-              : { duration: 0.3 }
-          }
-        />
-      ))}
-
-      {/* clouds (day) */}
-      <Motion.span
-        className="absolute bottom-1.5 right-2 h-3 w-7 rounded-full bg-white/90"
-        animate={{ y: isDark ? 26 : 0, opacity: isDark ? 0 : 1 }}
-        transition={{ duration: 0.5 }}
-      />
-      <Motion.span
-        className="absolute bottom-3 right-5 h-3 w-5 rounded-full bg-white/80"
-        animate={{ y: isDark ? 26 : 0, opacity: isDark ? 0 : 1 }}
-        transition={{ duration: 0.6, delay: 0.05 }}
-      />
-
-      {/* knob */}
-      <Motion.span
-        className="absolute left-1 top-1 h-8 w-8"
-        animate={{ x: isDark ? 32 : 0 }}
-        variants={{ press: { scaleX: 1.2 } }}
-        transition={{ type: "spring", stiffness: 300, damping: 20 }}
-      >
-        {/* sun */}
-        <Motion.span
-          className="absolute inset-0"
-          animate={{
-            opacity: isDark ? 0 : 1,
-            rotate: isDark ? -120 : 0,
-            scale: isDark ? 0.3 : 1,
-          }}
-          transition={{ duration: 0.5 }}
-        >
-          <Motion.span
-            aria-hidden="true"
-            className="absolute -inset-1 rounded-full border-2 border-dashed border-amber-300/80"
-            animate={{ rotate: 360 }}
-            transition={{ duration: 14, repeat: Infinity, ease: "linear" }}
-          />
-          <span className="absolute inset-0 rounded-full bg-gradient-to-br from-yellow-200 via-amber-400 to-orange-500 shadow-[0_0_18px_rgba(251,191,36,0.9),inset_0_-3px_5px_rgba(234,88,12,0.5)]" />
-        </Motion.span>
-        {/* moon */}
-        <Motion.span
-          className="absolute inset-0"
-          animate={{
-            opacity: isDark ? 1 : 0,
-            rotate: isDark ? 0 : 140,
-            scale: isDark ? 1 : 0.3,
-          }}
-          transition={{ duration: 0.5 }}
-        >
-          <span className="absolute inset-0 rounded-full bg-gradient-to-br from-slate-50 via-slate-200 to-slate-400 shadow-[0_0_16px_rgba(196,181,253,0.7),inset_-3px_-3px_6px_rgba(100,116,139,0.5)]" />
-          <span className="absolute left-[7px] top-[8px] h-2.5 w-2.5 rounded-full bg-slate-400/60" />
-          <span className="absolute bottom-[7px] right-[8px] h-2 w-2 rounded-full bg-slate-400/60" />
-          <span className="absolute right-[7px] top-[7px] h-1 w-1 rounded-full bg-slate-400/60" />
-        </Motion.span>
-      </Motion.span>
     </Motion.button>
   );
 }
