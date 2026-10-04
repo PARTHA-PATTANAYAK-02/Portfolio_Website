@@ -22,8 +22,8 @@ const MESSAGES = [
 
 const QUICK_LINKS = [
   { label: "Home", path: "/", icon: Home },
-  { label: "Projects", path: "/projects", icon: FolderKanban },
-  { label: "Contact", path: "/contact", icon: Mail },
+  { label: "Projects", path: "/#projects", icon: FolderKanban },
+  { label: "Contact", path: "/#contact", icon: Mail },
 ];
 
 export default function NotFound() {

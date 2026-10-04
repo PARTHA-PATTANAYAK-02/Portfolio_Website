@@ -141,7 +141,7 @@ export default function Hero() {
               transition={{ delay: 0.5, duration: 0.5 }}
               className="mt-8 flex flex-wrap items-center gap-3"
             >
-              <MagneticLink to="/contact">
+              <MagneticLink to="/#contact">
                 <span className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-primary to-fuchsia-500 text-white font-semibold shadow-lg shadow-primary/30 hover:shadow-primary/60 transition-all">
                   Hire Me
                   <ArrowRight className="w-4 h-4" />
@@ -149,7 +149,7 @@ export default function Hero() {
               </MagneticLink>
 
               <a
-                href="/resume.pdf"
+                href="/Partha_Resume.pdf"
                 download
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-border glass text-sm font-semibold hover:border-primary/50 hover:bg-primary/5 transition-all"
               >

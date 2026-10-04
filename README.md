@@ -62,7 +62,7 @@ npm install
 
 ```bash
 VITE_SERVICE_ID=your_service_id
-VITE_TEMPLETE_ID=your_template_id
+VITE_TEMPLATE_ID=your_template_id
 VITE_PUBLIC_KEY=your_public_key
 ```
 
@@ -76,7 +76,11 @@ npm run dev
 
 ## 🌐 Deployment
 
-## This project can be deployed easily using:
+Deploy the project with Vercel by importing the repository. Vercel detects Vite
+automatically; use `npm run build` as the build command and `dist` as the output
+directory if prompted. Add `VITE_SERVICE_ID`, `VITE_TEMPLATE_ID`, and
+`VITE_PUBLIC_KEY` to the project's environment variables, then redeploy so the
+contact form can send messages.
 
 - ### 🔗 [Vercel](https://partha-portfolio-02.vercel.app/)
 

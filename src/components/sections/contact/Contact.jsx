@@ -1,33 +1,28 @@
 import { useEffect, useRef, useState } from "react";
-
 import {
   motion as Motion,
   AnimatePresence,
   useMotionValue,
+  useMotionTemplate,
   useSpring,
   useTransform,
+  useReducedMotion,
 } from "framer-motion";
-
 import emailjs from "@emailjs/browser";
-
 import {
-  Mail,
   Send,
   Loader2,
   CheckCircle2,
   XCircle,
-  Download,
   ArrowUpRight,
   Copy,
   Check,
   Sparkles,
+  Timer,
 } from "lucide-react";
-
 import { LinkedinIcon, GithubIcon, LeetCodeIcon } from "../../ui/BrandIcons";
 
-/* =========================================================
-   SOCIAL ICONS — Facebook / Instagram / X
-========================================================= */
+/* ---------- Social icons ---------- */
 
 function FacebookIcon({ className = "" }) {
   return (
@@ -72,9 +67,7 @@ function XIcon({ className = "" }) {
   );
 }
 
-/* =========================================================
-   SOCIAL LINKS
-========================================================= */
+const EMAIL = "pattanayakp2002@gmail.com";
 
 const SOCIALS = [
   {
@@ -82,218 +75,166 @@ const SOCIALS = [
     href: "https://www.linkedin.com/in/iampartha02/",
     label: "LinkedIn",
     accent: "text-[#0A66C2]",
-    glow: "rgba(10, 102, 194, 0.32)",
+    glow: "rgba(10, 102, 194, 0.55)",
   },
-
   {
     icon: GithubIcon,
     href: "https://github.com/PARTHA-PATTANAYAK-02/",
     label: "GitHub",
     accent: "text-slate-800 dark:text-white",
-    glow: "rgba(148, 163, 184, 0.28)",
+    glow: "rgba(148, 163, 184, 0.55)",
   },
-
   {
     icon: LeetCodeIcon,
     href: "https://leetcode.com/u/PARTHA_PATTANAYAK/",
     label: "LeetCode",
     accent: "text-amber-500",
-    glow: "rgba(245, 158, 11, 0.32)",
+    glow: "rgba(245, 158, 11, 0.55)",
   },
-
   {
     icon: FacebookIcon,
     href: "https://facebook.com/",
     label: "Facebook",
     accent: "text-[#1877F2]",
-    glow: "rgba(24, 119, 242, 0.30)",
+    glow: "rgba(24, 119, 242, 0.55)",
   },
-
   {
     icon: InstagramIcon,
     href: "https://instagram.com/",
     label: "Instagram",
     accent: "text-[#E1306C]",
-    glow: "rgba(225, 48, 108, 0.30)",
+    glow: "rgba(225, 48, 108, 0.55)",
   },
-
   {
     icon: XIcon,
     href: "https://x.com/",
     label: "X",
     accent: "text-slate-900 dark:text-white",
-    glow: "rgba(148, 163, 184, 0.28)",
+    glow: "rgba(148, 163, 184, 0.55)",
   },
 ];
 
-/* =========================================================
-   3D TILT CARD
-========================================================= */
+/* ---------- Glow card: soft 3D tilt + animated border + cursor light ---------- */
 
-function TiltCard({ children, className = "", intensity = 6 }) {
+function GlowCard({
+  children,
+  intensity = 3,
+  innerClassName = "p-5 sm:p-8",
+  className = "",
+}) {
   const ref = useRef(null);
+  const reduce = useReducedMotion();
+  const px = useMotionValue(0.5);
+  const py = useMotionValue(0.5);
+  const sx = useMotionValue(-400);
+  const sy = useMotionValue(-400);
 
-  const mouseX = useMotionValue(0.5);
-  const mouseY = useMotionValue(0.5);
-
+  const spring = { stiffness: 160, damping: 20, mass: 0.6 };
   const rotateX = useSpring(
-    useTransform(mouseY, [0, 1], [intensity, -intensity]),
-    {
-      stiffness: 180,
-      damping: 18,
-      mass: 0.6,
-    },
+    useTransform(py, [0, 1], [intensity, -intensity]),
+    spring,
   );
-
   const rotateY = useSpring(
-    useTransform(mouseX, [0, 1], [-intensity, intensity]),
-    {
-      stiffness: 180,
-      damping: 18,
-      mass: 0.6,
-    },
+    useTransform(px, [0, 1], [-intensity, intensity]),
+    spring,
   );
+  const spot = useMotionTemplate`radial-gradient(420px circle at ${sx}px ${sy}px, rgba(232,200,135,0.14), rgba(139,92,246,0.12) 45%, transparent 70%)`;
 
-  const handleMouseMove = (e) => {
-    if (!ref.current) return;
-
-    const rect = ref.current.getBoundingClientRect();
-
-    mouseX.set((e.clientX - rect.left) / rect.width);
-    mouseY.set((e.clientY - rect.top) / rect.height);
+  const onMove = (e) => {
+    if (e.pointerType !== "mouse" || !ref.current) return;
+    const r = ref.current.getBoundingClientRect();
+    const x = e.clientX - r.left;
+    const y = e.clientY - r.top;
+    sx.set(x);
+    sy.set(y);
+    px.set(x / r.width);
+    py.set(y / r.height);
   };
 
-  const handleMouseLeave = () => {
-    mouseX.set(0.5);
-    mouseY.set(0.5);
+  const onLeave = () => {
+    px.set(0.5);
+    py.set(0.5);
+    sx.set(-400);
+    sy.set(-400);
   };
 
   return (
     <Motion.div
       ref={ref}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-60px" }}
+      transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+      onPointerMove={onMove}
+      onPointerLeave={onLeave}
       style={{
-        rotateX,
-        rotateY,
-        transformPerspective: 1200,
+        rotateX: reduce ? 0 : rotateX,
+        rotateY: reduce ? 0 : rotateY,
+        transformPerspective: 1400,
       }}
-      className={`relative transform-gpu ${className}`}
+      className={`group relative transform-gpu rounded-3xl p-px shadow-xl shadow-slate-900/10 dark:shadow-black/40 ${className}`}
     >
-      {children}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit] opacity-50 transition-opacity duration-500 group-hover:opacity-100">
+        <Motion.div
+          aria-hidden="true"
+          className="absolute left-1/2 top-1/2 aspect-square w-[150%]"
+          style={{
+            x: "-50%",
+            y: "-50%",
+            background:
+              "conic-gradient(from 0deg, transparent 0 55%, rgba(232,200,135,0.9) 74%, rgba(139,92,246,0.9) 88%, transparent 100%)",
+          }}
+          animate={reduce ? undefined : { rotate: 360 }}
+          transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
+        />
+        <div className="absolute inset-0 bg-slate-200/80 dark:bg-white/10" />
+      </div>
+
+      <div
+        className={`relative overflow-hidden rounded-[calc(1.5rem-1px)] bg-white/85 backdrop-blur-xl dark:bg-slate-950/80 ${innerClassName}`}
+      >
+        <Motion.div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0"
+          style={{ background: spot }}
+        />
+        <div className="relative z-10">{children}</div>
+      </div>
     </Motion.div>
   );
 }
 
-/* =========================================================
-   CARD GLOW
-========================================================= */
-
-function CardGlow() {
-  return (
-    <div
-      aria-hidden
-      className="
-        pointer-events-none
-        absolute
-        -inset-px
-        rounded-[inherit]
-        opacity-0
-        transition-opacity
-        duration-500
-        group-hover:opacity-100
-      "
-      style={{
-        background:
-          "radial-gradient(circle at 50% 0%, hsl(262 83% 58% / 0.15), transparent 48%)",
-      }}
-    />
-  );
-}
-
-/* =========================================================
-   BACKGROUND
-========================================================= */
+/* ---------- Background ---------- */
 
 function ContactBackground() {
   return (
     <div
       aria-hidden
-      className="
-        pointer-events-none
-        absolute
-        inset-0
-        overflow-hidden
-      "
+      className="pointer-events-none absolute inset-0 overflow-hidden"
     >
       <Motion.div
-        animate={{
-          x: [0, 60, 0],
-          y: [0, -30, 0],
-          scale: [1, 1.08, 1],
-        }}
-        transition={{
-          duration: 15,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-        className="
-          absolute
-          -left-32
-          -top-32
-          h-[420px]
-          w-[420px]
-          rounded-full
-          blur-[120px]
-          opacity-[0.08]
-          dark:opacity-[0.20]
-        "
+        animate={{ x: [0, 60, 0], y: [0, -30, 0], scale: [1, 1.08, 1] }}
+        transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute -left-32 top-0 h-[420px] w-[420px] rounded-full opacity-[0.08] blur-[120px] dark:opacity-[0.2]"
         style={{
           background:
             "radial-gradient(circle, hsl(262 83% 58%), transparent 70%)",
         }}
       />
-
       <Motion.div
-        animate={{
-          x: [0, -50, 0],
-          y: [0, 35, 0],
-          scale: [1, 1.1, 1],
-        }}
-        transition={{
-          duration: 18,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-        className="
-          absolute
-          -bottom-32
-          -right-32
-          h-[400px]
-          w-[400px]
-          rounded-full
-          blur-[120px]
-          opacity-[0.06]
-          dark:opacity-[0.15]
-        "
+        animate={{ x: [0, -50, 0], y: [0, 35, 0], scale: [1, 1.1, 1] }}
+        transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute -right-32 bottom-0 h-[400px] w-[400px] rounded-full opacity-[0.06] blur-[120px] dark:opacity-[0.15]"
         style={{
           background:
-            "radial-gradient(circle, hsl(190 90% 55%), transparent 70%)",
+            "radial-gradient(circle, hsl(40 90% 60%), transparent 70%)",
         }}
       />
-
       <div
-        className="
-          absolute
-          inset-0
-          opacity-[0.025]
-          dark:opacity-[0.035]
-        "
+        className="absolute inset-0 opacity-[0.025] dark:opacity-[0.035]"
         style={{
-          backgroundImage: `
-            linear-gradient(hsl(var(--foreground)) 1px, transparent 1px),
-            linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)
-          `,
+          backgroundImage:
+            "linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)",
           backgroundSize: "70px 70px",
         }}
       />
@@ -301,951 +242,413 @@ function ContactBackground() {
   );
 }
 
-/* =========================================================
-   MAIN CONTACT
-========================================================= */
+/* ---------- Inline field: sits inside a sentence ---------- */
+
+function InlineField({ id, label, placeholder, className = "", ...rest }) {
+  const [focus, setFocus] = useState(false);
+  return (
+    <span className={`relative inline-block align-baseline ${className}`}>
+      <label htmlFor={id} className="sr-only">
+        {label}
+      </label>
+      <input
+        id={id}
+        name={id}
+        placeholder={placeholder}
+        onFocus={() => setFocus(true)}
+        onBlur={() => setFocus(false)}
+        className="w-full border-b-2 border-slate-300 bg-transparent px-1 pb-0.5 font-display font-semibold text-primary outline-none transition-colors placeholder:font-normal placeholder:text-slate-400 disabled:opacity-60 dark:border-white/20"
+        {...rest}
+      />
+      <Motion.span
+        aria-hidden="true"
+        animate={{ scaleX: focus ? 1 : 0 }}
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        className="pointer-events-none absolute -bottom-0.5 left-0 right-0 h-0.5 origin-left bg-gradient-to-r from-amber-300 via-primary to-fuchsia-400"
+      />
+    </span>
+  );
+}
+
+/* ---------- Social tile ---------- */
+
+function SocialTile({ s, index }) {
+  const Icon = s.icon;
+  return (
+    <Motion.a
+      href={s.href}
+      target="_blank"
+      rel="noreferrer"
+      aria-label={s.label}
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.5, delay: index * 0.07 }}
+      whileHover={{ y: -10, rotateX: 14, scale: 1.05 }}
+      whileTap={{ scale: 0.96 }}
+      style={{ transformPerspective: 700, "--social-glow": s.glow }}
+      className="group/tile relative flex flex-col items-center gap-2.5 rounded-2xl border border-slate-200 bg-white/80 px-3 py-4 backdrop-blur-xl transition-[box-shadow,border-color] duration-300 hover:border-transparent hover:shadow-[0_22px_40px_-12px_var(--social-glow)] dark:border-white/10 dark:bg-white/[0.04]"
+    >
+      <span className="pointer-events-none absolute inset-0 rounded-[inherit] bg-gradient-to-b from-white/60 to-transparent opacity-0 transition-opacity duration-300 group-hover/tile:opacity-100 dark:from-white/10" />
+      <Icon
+        className={`relative h-5 w-5 transition-transform duration-500 group-hover/tile:scale-110 group-hover/tile:-rotate-6 ${s.accent}`}
+      />
+      <span className="relative text-xs font-medium text-slate-600 dark:text-slate-400">
+        {s.label}
+      </span>
+    </Motion.a>
+  );
+}
+
+/* ---------- Success sparkle burst ---------- */
+
+function Burst() {
+  return (
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 grid place-items-center"
+    >
+      {Array.from({ length: 14 }).map((_, i) => {
+        const a = (i / 14) * Math.PI * 2;
+        return (
+          <Motion.span
+            key={i}
+            initial={{ x: 0, y: 0, scale: 0, opacity: 1 }}
+            animate={{
+              x: Math.cos(a) * 90,
+              y: Math.sin(a) * 36,
+              scale: [0, 1.2, 0],
+              opacity: [1, 1, 0],
+            }}
+            transition={{ duration: 0.9, ease: "easeOut" }}
+            className={`absolute h-1.5 w-1.5 rounded-full ${i % 2 ? "bg-amber-300" : "bg-fuchsia-300"}`}
+          />
+        );
+      })}
+    </span>
+  );
+}
+
+/* ---------- Main ---------- */
+
+const COOLDOWN_SECONDS = 60;
+const COOLDOWN_KEY = "portfolio_contact_last_sent";
 
 export default function Contact() {
   const formRef = useRef(null);
-
+  const timers = useRef([]);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     message: "",
   });
-
   const [status, setStatus] = useState("idle");
-
   const [copied, setCopied] = useState(false);
-
-  /* =======================================================
-     COOLDOWN
-     
-     User can send only once every 60 seconds.
-     Timestamp is stored in localStorage so reload won't
-     reset the timer.
-  ======================================================= */
-
-  const COOLDOWN_SECONDS = 60;
-
-  const COOLDOWN_KEY = "portfolio_contact_last_sent";
-
   const [cooldown, setCooldown] = useState(0);
 
-  /* =======================================================
-     RESTORE COOLDOWN AFTER PAGE LOAD / REFRESH
-  ======================================================= */
+  const later = (fn, ms) => timers.current.push(setTimeout(fn, ms));
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
+  // Restore cooldown after refresh (timestamp lives in localStorage)
   useEffect(() => {
-    const updateCooldown = () => {
-      const lastSent = localStorage.getItem(COOLDOWN_KEY);
-
-      if (!lastSent) {
-        setCooldown(0);
-        return;
+    const tick = () => {
+      let lastSent = null;
+      try {
+        lastSent = localStorage.getItem(COOLDOWN_KEY);
+      } catch {
+        /* storage unavailable */
       }
-
-      const elapsed = Math.floor((Date.now() - Number(lastSent)) / 1000);
-
-      const remaining = COOLDOWN_SECONDS - elapsed;
-
-      if (remaining > 0) {
-        setCooldown(remaining);
-      } else {
+      if (!lastSent) return setCooldown(0);
+      const remaining =
+        COOLDOWN_SECONDS - Math.floor((Date.now() - Number(lastSent)) / 1000);
+      if (remaining > 0) setCooldown(remaining);
+      else {
         setCooldown(0);
-        localStorage.removeItem(COOLDOWN_KEY);
+        try {
+          localStorage.removeItem(COOLDOWN_KEY);
+        } catch {
+          /* ignore */
+        }
       }
     };
-
-    // Check immediately when component loads
-    updateCooldown();
-
-    // Update every second
-    const interval = setInterval(updateCooldown, 1000);
-
-    return () => clearInterval(interval);
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
   }, []);
 
-  /* =======================================================
-     INPUT
-  ======================================================= */
+  const handleChange = (e) =>
+    setFormData((p) => ({ ...p, [e.target.name]: e.target.value }));
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  /* =======================================================
-     COPY EMAIL
-  ======================================================= */
-
-  const handleCopyEmail = async (e) => {
-    e.preventDefault();
-
+  const handleCopyEmail = async () => {
     try {
-      await navigator.clipboard.writeText("pattanayakp2002@gmail.com");
-
+      await navigator.clipboard.writeText(EMAIL);
       setCopied(true);
-
-      setTimeout(() => {
-        setCopied(false);
-      }, 1600);
-    } catch (error) {
-      console.error("Copy failed:", error);
+      later(() => setCopied(false), 1800);
+    } catch (err) {
+      console.error("Copy failed:", err);
     }
   };
-
-  /* =======================================================
-     SEND EMAIL
-  ======================================================= */
 
   const handleSubmit = (e) => {
     e.preventDefault();
-
-    /* -----------------------------------------------
-       STOP SUBMISSION IF COOLDOWN IS ACTIVE
-    ----------------------------------------------- */
-
-    if (cooldown > 0) {
-      return;
-    }
-
-    /* -----------------------------------------------
-       PREVENT DOUBLE CLICK WHILE SUBMITTING
-    ----------------------------------------------- */
-
-    if (status === "submitting") {
-      return;
-    }
+    if (cooldown > 0 || status === "submitting") return;
 
     setStatus("submitting");
-
-    const serviceId = import.meta.env.VITE_SERVICE_ID;
-
-    const templateId = import.meta.env.VITE_TEMPLATE_ID;
-
-    const publicKey = import.meta.env.VITE_PUBLIC_KEY;
-
-    emailjs.sendForm(serviceId, templateId, formRef.current, publicKey).then(
-      () => {
-        /* -----------------------------------------
-             EMAIL SENT SUCCESSFULLY
-          ----------------------------------------- */
-
-        setStatus("success");
-
-        setFormData({
-          name: "",
-          email: "",
-          message: "",
-        });
-
-        /* -----------------------------------------
-             START 60 SECOND COOLDOWN
-
-             IMPORTANT:
-             We store the exact timestamp, not
-             simply "60", so page reload will still
-             know how much time remains.
-          ----------------------------------------- */
-
-        const now = Date.now();
-
-        localStorage.setItem(COOLDOWN_KEY, String(now));
-
-        setCooldown(COOLDOWN_SECONDS);
-
-        setTimeout(() => {
-          setStatus("idle");
-        }, 4500);
-      },
-
-      (error) => {
-        /* -----------------------------------------
-             EMAIL FAILED
-
-             Cooldown DOES NOT start if EmailJS
-             fails.
-          ----------------------------------------- */
-
-        console.error("EmailJS error:", error?.text || error);
-
-        setStatus("error");
-
-        setTimeout(() => {
-          setStatus("idle");
-        }, 4500);
-      },
-    );
+    emailjs
+      .sendForm(
+        import.meta.env.VITE_SERVICE_ID,
+        import.meta.env.VITE_TEMPLATE_ID,
+        formRef.current,
+        import.meta.env.VITE_PUBLIC_KEY,
+      )
+      .then(
+        () => {
+          setStatus("success");
+          setFormData({ name: "", email: "", message: "" });
+          try {
+            localStorage.setItem(COOLDOWN_KEY, String(Date.now()));
+          } catch {
+            /* ignore */
+          }
+          setCooldown(COOLDOWN_SECONDS);
+          later(() => setStatus("idle"), 4500);
+        },
+        (error) => {
+          console.error("EmailJS error:", error?.text || error);
+          setStatus("error"); // no cooldown on failure
+          later(() => setStatus("idle"), 4500);
+        },
+      );
   };
+
+  const busy = status === "submitting";
+  const locked = busy || cooldown > 0;
 
   return (
     <section
       id="contact"
-      className="
-        relative
-        overflow-hidden
-        scroll-mt-20
-        pt-4
-        pb-10
-        sm:pb-14
-      "
+      className="relative scroll-mt-20 overflow-hidden pb-28 pt-4 sm:pb-32 lg:pb-14"
     >
       <ContactBackground />
 
       <div className="container-custom relative z-10">
-        {/* =================================================
-            HEADER
-        ================================================= */}
-
-        <Motion.div
-          initial={{
-            opacity: 0,
-            y: 15,
-          }}
-          whileInView={{
-            opacity: 1,
-            y: 0,
-          }}
-          viewport={{
-            once: true,
-          }}
-          transition={{
-            duration: 0.6,
-          }}
-          className="
-            mb-10
-            flex
-            flex-wrap
-            items-end
-            justify-between
-            gap-5
-          "
-        >
-          <div>
-            <div
-              className="
-                mb-2
-                flex
-                items-center
-                gap-2
-                font-mono
-                text-xs
-                font-semibold
-                uppercase
-                tracking-[0.2em]
-                text-primary
-              "
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              Let's talk
+        <div className="w-full">
+          {/* ===== 1. Centered header ===== */}
+          <Motion.div
+            initial={{ opacity: 0, y: 15 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="mb-8 text-center"
+          >
+            <div className="mx-auto mb-5 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+              </span>
+              Available for opportunities
             </div>
 
-            <h2
-              className="
-                font-display
-                text-4xl
-                font-bold
-                leading-none
-                tracking-tight
-                text-slate-950
-                dark:text-white
-                sm:text-5xl
-              "
-            >
+            <h2 className="font-display text-3xl font-bold leading-none tracking-tight text-slate-950 dark:text-white sm:text-5xl">
               Get in <span className="gradient-text">Touch</span>
             </h2>
-
-            <p
-              className="
-                mt-4
-                max-w-xl
-                text-sm
-                font-medium
-                leading-6
-                text-slate-600
-                dark:text-slate-400
-                sm:text-base
-              "
-            >
-              Have an opportunity, project, or idea? Send me a message and let's
-              connect.
+            <p className="mx-auto mt-4 max-w-xl text-sm font-medium leading-6 text-slate-600 dark:text-slate-400">
+              Have an opportunity, project, or idea? Write me a few lines below
+              or copy my email.
             </p>
-          </div>
+          </Motion.div>
 
-          <div
-            className="
-              flex
-              items-center
-              gap-2
-              rounded-full
-              border
-              border-emerald-500/30
-              bg-emerald-500/10
-              px-3
-              py-1.5
-              text-xs
-              font-medium
-              text-emerald-600
-              dark:text-emerald-400
-            "
-          >
-            <span className="relative flex h-2 w-2">
-              <span
-                className="
-                  absolute
-                  inline-flex
-                  h-full
-                  w-full
-                  animate-ping
-                  rounded-full
-                  bg-emerald-400
-                  opacity-75
-                "
-              />
-
-              <span
-                className="
-                  relative
-                  inline-flex
-                  h-2
-                  w-2
-                  rounded-full
-                  bg-emerald-500
-                "
-              />
-            </span>
-            Available for opportunities
-          </div>
-        </Motion.div>
-
-        {/* =================================================
-            MAIN GRID
-        ================================================= */}
-
-        <div
-          className="
-            grid
-            gap-6
-            lg:grid-cols-[0.85fr_1.15fr]
-          "
-        >
-          {/* =================================================
-              LEFT CARD
-          ================================================= */}
-
-          <TiltCard intensity={5} className="h-full">
-            <div
-              className="
-                group
-                relative
-                h-full
-                overflow-hidden
-                rounded-3xl
-                border
-                border-slate-200
-                bg-white/70
-                p-6
-                shadow-xl
-                shadow-slate-900/5
-                backdrop-blur-xl
-                dark:border-white/10
-                dark:bg-white/[0.035]
-                dark:shadow-black/20
-                sm:p-8
-              "
+          {/* ===== 2. Big copyable email ===== */}
+          <GlowCard intensity={2.5} innerClassName="p-0" className="mb-6">
+            <button
+              type="button"
+              onClick={handleCopyEmail}
+              aria-label={`Copy email address ${EMAIL}`}
+              className="group/mail flex w-full items-center justify-between gap-4 px-5 py-4 text-left sm:px-8 sm:py-5"
             >
-              <CardGlow />
+              <span className="min-w-0">
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-primary">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  {copied ? "Copied to clipboard" : "Click to copy my email"}
+                </span>
+                <span className="mt-1.5 block break-all font-display text-base font-bold tracking-tight text-slate-950 transition-colors duration-300 group-hover/mail:text-primary dark:text-white sm:text-xl md:text-2xl">
+                  {EMAIL}
+                </span>
+              </span>
 
-              <div className="relative z-10">
-                <div
-                  className="
-                    mb-6
-                    flex
-                    h-12
-                    w-12
-                    items-center
-                    justify-center
-                    rounded-2xl
-                    border
-                    border-primary/20
-                    bg-primary/10
-                    text-primary
-                  "
-                >
-                  <Mail className="h-5 w-5" />
-                </div>
+              <Motion.span
+                whileHover={{ rotateY: 180 }}
+                style={{ transformPerspective: 500 }}
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-amber-300/40 bg-gradient-to-br from-primary/20 to-fuchsia-500/10 text-primary shadow-[0_8px_24px_-8px_rgba(139,92,246,0.5)]"
+              >
+                <AnimatePresence mode="wait" initial={false}>
+                  <Motion.span
+                    key={copied ? "ok" : "copy"}
+                    initial={{ opacity: 0, scale: 0.6, rotate: -40 }}
+                    animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                    exit={{ opacity: 0, scale: 0.6, rotate: 40 }}
+                    transition={{ duration: 0.2 }}
+                    className={copied ? "text-emerald-500" : ""}
+                  >
+                    {copied ? (
+                      <Check className="h-5 w-5" />
+                    ) : (
+                      <Copy className="h-5 w-5" />
+                    )}
+                  </Motion.span>
+                </AnimatePresence>
+              </Motion.span>
+            </button>
+          </GlowCard>
 
-                <h3
-                  className="
-                    text-xl
-                    font-bold
-                    text-slate-950
-                    dark:text-white
-                  "
-                >
-                  Let's build something
-                </h3>
+          {/* ===== 3. Letter-style form ===== */}
+          <GlowCard intensity={2} className="mb-8">
+            <form ref={formRef} onSubmit={handleSubmit}>
+              <p className="text-base font-medium leading-[2.4rem] text-slate-700 dark:text-slate-300 sm:text-lg sm:leading-[2.9rem]">
+                Hi Partha, I&apos;m{" "}
+                <InlineField
+                  id="name"
+                  label="Your name"
+                  placeholder="your name"
+                  type="text"
+                  required
+                  maxLength={80}
+                  autoComplete="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  disabled={busy}
+                  className="w-36 sm:w-52"
+                />
+                . You can reach me at{" "}
+                <InlineField
+                  id="email"
+                  label="Your email"
+                  placeholder="you@example.com"
+                  type="email"
+                  required
+                  maxLength={120}
+                  autoComplete="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  disabled={busy}
+                  className="w-full sm:w-72"
+                />
+                . I&apos;d like to talk about:
+              </p>
 
-                <p
-                  className="
-                    mt-3
-                    text-sm
-                    leading-6
-                    text-slate-600
-                    dark:text-slate-400
-                  "
-                >
-                  I'm always open to discussing new projects, opportunities,
-                  collaborations, and interesting ideas.
+              <div className="relative mt-4">
+                <label htmlFor="message" className="sr-only">
+                  Your message
+                </label>
+                <textarea
+                  id="message"
+                  name="message"
+                  rows={4}
+                  required
+                  maxLength={1000}
+                  disabled={busy}
+                  value={formData.message}
+                  onChange={handleChange}
+                  placeholder="Tell me about your project, idea, or opportunity..."
+                  className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm leading-6 text-slate-900 outline-none transition-all duration-300 placeholder:text-slate-400 focus:border-primary/50 focus:bg-white focus:ring-4 focus:ring-primary/10 disabled:opacity-60 dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:focus:bg-white/[0.06] sm:text-[15px]"
+                />
+                <span className="pointer-events-none absolute bottom-3 right-4 font-mono text-[10px] text-slate-400">
+                  {formData.message.length}/1000
+                </span>
+              </div>
+
+              <div aria-live="polite" className="mt-4">
+                <AnimatePresence mode="wait">
+                  {status === "success" && (
+                    <Motion.div
+                      key="ok"
+                      initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      className="flex items-center gap-2 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-600 dark:text-emerald-400"
+                    >
+                      <CheckCircle2 className="h-4 w-4" />
+                      Message sent successfully!
+                    </Motion.div>
+                  )}
+                  {status === "error" && (
+                    <Motion.div
+                      key="err"
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: [0, -6, 6, -4, 4, 0] }}
+                      exit={{ opacity: 0, y: -8 }}
+                      className="flex items-center gap-2 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400"
+                    >
+                      <XCircle className="h-4 w-4" />
+                      Something went wrong. Please try again.
+                    </Motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              <div className="mt-5 flex flex-col-reverse items-stretch gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-center text-xs font-medium text-slate-400 sm:text-left">
+                  {cooldown > 0
+                    ? "You can send another message after the cooldown ends."
+                    : "Your message goes straight to my inbox."}
                 </p>
 
-                {/* EMAIL */}
-
-                <button
-                  type="button"
-                  onClick={handleCopyEmail}
-                  className="
-                    mt-7
-                    flex
-                    w-full
-                    items-center
-                    justify-between
-                    rounded-2xl
-                    border
-                    border-slate-200
-                    bg-slate-50
-                    px-4
-                    py-3
-                    text-left
-                    transition-all
-                    hover:border-primary/30
-                    hover:bg-primary/5
-                    dark:border-white/10
-                    dark:bg-white/[0.025]
-                    dark:hover:bg-white/[0.05]
-                  "
-                >
-                  <div>
-                    <p
-                      className="
-                        text-[10px]
-                        font-semibold
-                        uppercase
-                        tracking-[0.18em]
-                        text-slate-400
-                      "
-                    >
-                      Email
-                    </p>
-
-                    <p
-                      className="
-                        mt-1
-                        break-all
-                        text-sm
-                        font-medium
-                        text-slate-800
-                        dark:text-slate-200
-                      "
-                    >
-                      pattanayakp2002@gmail.com
-                    </p>
-                  </div>
-
-                  <AnimatePresence mode="wait">
-                    {copied ? (
-                      <Motion.div
-                        key="copied"
-                        initial={{
-                          opacity: 0,
-                          scale: 0.7,
-                        }}
-                        animate={{
-                          opacity: 1,
-                          scale: 1,
-                        }}
-                        exit={{
-                          opacity: 0,
-                          scale: 0.7,
-                        }}
-                        className="text-emerald-500"
-                      >
-                        <Check className="h-4 w-4" />
-                      </Motion.div>
-                    ) : (
-                      <Motion.div
-                        key="copy"
-                        initial={{
-                          opacity: 0,
-                          scale: 0.7,
-                        }}
-                        animate={{
-                          opacity: 1,
-                          scale: 1,
-                        }}
-                        exit={{
-                          opacity: 0,
-                          scale: 0.7,
-                        }}
-                        className="
-                          text-slate-400
-                          transition-colors
-                          group-hover:text-primary
-                        "
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Motion.div>
-                    )}
-                  </AnimatePresence>
-                </button>
-
-                {/* SOCIALS */}
-
-                <div className="mt-7">
-                  <p
-                    className="
-                      mb-3
-                      text-[10px]
-                      font-semibold
-                      uppercase
-                      tracking-[0.18em]
-                      text-slate-400
-                    "
-                  >
-                    Find me online
-                  </p>
-
-                  <div className="flex flex-wrap gap-2">
-                    {SOCIALS.map((social) => {
-                      const Icon = social.icon;
-
-                      return (
-                        <a
-                          key={social.label}
-                          href={social.href}
-                          target="_blank"
-                          rel="noreferrer"
-                          aria-label={social.label}
-                          className="
-                            group/social
-                            relative
-                            flex
-                            h-10
-                            w-10
-                            items-center
-                            justify-center
-                            rounded-xl
-                            border
-                            border-slate-200
-                            bg-white
-                            transition-all
-                            duration-300
-                            hover:-translate-y-1
-                            hover:scale-105
-                            hover:border-transparent
-                            dark:border-white/10
-                            dark:bg-white/[0.035]
-                          "
-                          style={{
-                            "--social-glow": social.glow,
-                          }}
-                        >
-                          <Icon
-                            className={`
-                              h-4
-                              w-4
-                              transition-transform
-                              duration-300
-                              group-hover/social:scale-110
-                              ${social.accent}
-                            `}
-                          />
-                        </a>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </TiltCard>
-
-          {/* =================================================
-              CONTACT FORM
-          ================================================= */}
-
-          <TiltCard intensity={4} className="h-full">
-            <div
-              className="
-                relative
-                h-full
-                overflow-hidden
-                rounded-3xl
-                border
-                border-slate-200
-                bg-white/80
-                p-6
-                shadow-xl
-                shadow-slate-900/5
-                backdrop-blur-xl
-                dark:border-white/10
-                dark:bg-white/[0.035]
-                dark:shadow-black/20
-                sm:p-8
-              "
-            >
-              <div className="relative z-10">
-                <div className="mb-7">
-                  <p
-                    className="
-                      text-xs
-                      font-semibold
-                      uppercase
-                      tracking-[0.18em]
-                      text-primary
-                    "
-                  >
-                    Send a message
-                  </p>
-
-                  <h3
-                    className="
-                      mt-2
-                      text-2xl
-                      font-bold
-                      text-slate-950
-                      dark:text-white
-                    "
-                  >
-                    Start a conversation
-                  </h3>
-                </div>
-
-                <form
-                  ref={formRef}
-                  onSubmit={handleSubmit}
-                  className="space-y-5"
-                >
-                  {/* NAME */}
-
-                  <div>
-                    <label
-                      htmlFor="name"
-                      className="
-                        mb-2
-                        block
-                        text-xs
-                        font-semibold
-                        text-slate-600
-                        dark:text-slate-400
-                      "
-                    >
-                      Name
-                    </label>
-
-                    <input
-                      id="name"
-                      type="text"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleChange}
-                      placeholder="Your name"
-                      required
-                      disabled={status === "submitting"}
-                      className="
-                        w-full
-                        rounded-2xl
-                        border
-                        border-slate-200
-                        bg-slate-50
-                        px-4
-                        py-3
-                        text-sm
-                        text-slate-900
-                        outline-none
-                        transition-all
-                        placeholder:text-slate-400
-                        focus:border-primary/50
-                        focus:ring-4
-                        focus:ring-primary/10
-                        disabled:cursor-not-allowed
-                        disabled:opacity-60
-                        dark:border-white/10
-                        dark:bg-white/[0.025]
-                        dark:text-white
-                      "
-                    />
-                  </div>
-
-                  {/* EMAIL */}
-
-                  <div>
-                    <label
-                      htmlFor="email"
-                      className="
-                        mb-2
-                        block
-                        text-xs
-                        font-semibold
-                        text-slate-600
-                        dark:text-slate-400
-                      "
-                    >
-                      Email
-                    </label>
-
-                    <input
-                      id="email"
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      placeholder="you@example.com"
-                      required
-                      disabled={status === "submitting"}
-                      className="
-                        w-full
-                        rounded-2xl
-                        border
-                        border-slate-200
-                        bg-slate-50
-                        px-4
-                        py-3
-                        text-sm
-                        text-slate-900
-                        outline-none
-                        transition-all
-                        placeholder:text-slate-400
-                        focus:border-primary/50
-                        focus:ring-4
-                        focus:ring-primary/10
-                        disabled:cursor-not-allowed
-                        disabled:opacity-60
-                        dark:border-white/10
-                        dark:bg-white/[0.025]
-                        dark:text-white
-                      "
-                    />
-                  </div>
-
-                  {/* MESSAGE */}
-
-                  <div>
-                    <label
-                      htmlFor="message"
-                      className="
-                        mb-2
-                        block
-                        text-xs
-                        font-semibold
-                        text-slate-600
-                        dark:text-slate-400
-                      "
-                    >
-                      Message
-                    </label>
-
-                    <textarea
-                      id="message"
-                      name="message"
-                      value={formData.message}
-                      onChange={handleChange}
-                      placeholder="Tell me about your project..."
-                      required
-                      rows={6}
-                      disabled={status === "submitting"}
-                      className="
-                        w-full
-                        resize-none
-                        rounded-2xl
-                        border
-                        border-slate-200
-                        bg-slate-50
-                        px-4
-                        py-3
-                        text-sm
-                        text-slate-900
-                        outline-none
-                        transition-all
-                        placeholder:text-slate-400
-                        focus:border-primary/50
-                        focus:ring-4
-                        focus:ring-primary/10
-                        disabled:cursor-not-allowed
-                        disabled:opacity-60
-                        dark:border-white/10
-                        dark:bg-white/[0.025]
-                        dark:text-white
-                      "
-                    />
-                  </div>
-
-                  {/* STATUS */}
-
-                  <AnimatePresence mode="wait">
-                    {status === "success" && (
-                      <Motion.div
-                        initial={{
-                          opacity: 0,
-                          y: -8,
-                        }}
-                        animate={{
-                          opacity: 1,
-                          y: 0,
-                        }}
-                        exit={{
-                          opacity: 0,
-                          y: -8,
-                        }}
-                        className="
-                          flex
-                          items-center
-                          gap-2
-                          rounded-2xl
-                          border
-                          border-emerald-500/20
-                          bg-emerald-500/10
-                          px-4
-                          py-3
-                          text-sm
-                          text-emerald-600
-                          dark:text-emerald-400
-                        "
-                      >
-                        <CheckCircle2 className="h-4 w-4" />
-                        Message sent successfully!
-                      </Motion.div>
-                    )}
-
-                    {status === "error" && (
-                      <Motion.div
-                        initial={{
-                          opacity: 0,
-                          y: -8,
-                        }}
-                        animate={{
-                          opacity: 1,
-                          y: 0,
-                        }}
-                        exit={{
-                          opacity: 0,
-                          y: -8,
-                        }}
-                        className="
-                          flex
-                          items-center
-                          gap-2
-                          rounded-2xl
-                          border
-                          border-red-500/20
-                          bg-red-500/10
-                          px-4
-                          py-3
-                          text-sm
-                          text-red-600
-                          dark:text-red-400
-                        "
-                      >
-                        <XCircle className="h-4 w-4" />
-                        Something went wrong. Please try again.
-                      </Motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {/* =================================================
-                      SEND BUTTON
-                  ================================================= */}
-
-                  <button
+                <div className="relative sm:w-64">
+                  <Motion.button
                     type="submit"
-                    disabled={status === "submitting" || cooldown > 0}
-                    className="
-                      group
-                      relative
-                      flex
-                      w-full
-                      items-center
-                      justify-center
-                      gap-2
-                      overflow-hidden
-                      rounded-2xl
-                      bg-primary
-                      px-5
-                      py-3.5
-                      text-sm
-                      font-semibold
-                      text-primary-foreground
-                      shadow-lg
-                      shadow-primary/20
-                      transition-all
-                      duration-300
-                      hover:-translate-y-0.5
-                      hover:shadow-xl
-                      hover:shadow-primary/25
-                      disabled:cursor-not-allowed
-                      disabled:translate-y-0
-                      disabled:opacity-60
-                    "
+                    disabled={locked}
+                    whileHover={locked ? undefined : { y: -2, scale: 1.02 }}
+                    whileTap={locked ? undefined : { scale: 0.97 }}
+                    className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl border border-white/20 bg-gradient-to-br from-primary via-violet-600 to-fuchsia-500 px-5 py-3.5 text-sm font-semibold text-white shadow-[0_10px_30px_-8px_rgba(139,92,246,0.55),inset_0_1px_0_rgba(255,255,255,0.3)] transition-shadow duration-300 hover:shadow-[0_16px_38px_-8px_rgba(139,92,246,0.7)] disabled:cursor-not-allowed disabled:opacity-70"
                   >
-                    {/* Shine */}
+                    <span className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-0 transition-all duration-700 group-hover:left-[130%] group-hover:opacity-100" />
 
-                    <span
-                      className="
-                        pointer-events-none
-                        absolute
-                        inset-0
-                        -translate-x-full
-                        bg-gradient-to-r
-                        from-transparent
-                        via-white/20
-                        to-transparent
-                        transition-transform
-                        duration-700
-                        group-hover:translate-x-full
-                      "
-                    />
-
-                    {/* SUBMITTING */}
-
-                    {status === "submitting" ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Sending...
-                      </>
-                    ) : cooldown > 0 ? (
-                      <>
-                        <Loader2 className="h-4 w-4" />
-                        Please wait {cooldown}s
-                      </>
-                    ) : (
-                      <>
-                        <Send className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                        Send Message
-                        <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                      </>
+                    {cooldown > 0 && (
+                      <Motion.span
+                        aria-hidden="true"
+                        className="absolute inset-y-0 left-0 w-full origin-left bg-black/20"
+                        animate={{ scaleX: cooldown / COOLDOWN_SECONDS }}
+                        transition={{ duration: 1, ease: "linear" }}
+                      />
                     )}
-                  </button>
 
-                  {/* COOLDOWN INFO */}
-
-                  {cooldown > 0 && (
-                    <p
-                      className="
-                        text-center
-                        text-[11px]
-                        font-medium
-                        text-slate-400
-                      "
-                    >
-                      You can send another message after the cooldown ends.
-                    </p>
-                  )}
-                </form>
+                    <span className="relative flex items-center gap-2">
+                      {busy ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Sending...
+                        </>
+                      ) : cooldown > 0 ? (
+                        <>
+                          <Timer className="h-4 w-4" />
+                          Send another in {cooldown}s
+                        </>
+                      ) : (
+                        <>
+                          <Send className="h-4 w-4 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                          Send Message
+                          <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                        </>
+                      )}
+                    </span>
+                  </Motion.button>
+                  <AnimatePresence>
+                    {status === "success" && <Burst key="burst" />}
+                  </AnimatePresence>
+                </div>
               </div>
-            </div>
-          </TiltCard>
+            </form>
+          </GlowCard>
+
+          {/* ===== 4. Social tiles row ===== */}
+          <p className="mb-4 text-center text-xs font-semibold text-slate-400">
+            Or find me online
+          </p>
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+            {SOCIALS.map((s, i) => (
+              <SocialTile key={s.label} s={s} index={i} />
+            ))}
+          </div>
         </div>
       </div>
     </section>

@@ -1,5 +1,5 @@
-import { lazy, Suspense } from "react";
-import { Routes, Route } from "react-router-dom";
+import { lazy, Suspense, useEffect, useState } from "react";
+import { Navigate, Routes, Route } from "react-router-dom";
 
 import Navbar from "./components/layout/Navbar";
 import Footer from "./components/layout/Footer";
@@ -7,12 +7,18 @@ import MobileBottomNav from "./components/layout/MobileBottomNav";
 import CommandPalette from "./components/layout/CommandPalette";
 import DotField from "./components/ui/DotField";
 
-import Home from "./pages/Home";
-import NotFound from "./pages/NotFound";
-
+const Home = lazy(() => import("./pages/Home"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 const PetBuddy = lazy(() => import("./components/ui/PetBuddy"));
 
 export default function App() {
+  const [loadPetBuddy, setLoadPetBuddy] = useState(false);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setLoadPetBuddy(true), 3000);
+    return () => window.clearTimeout(timeout);
+  }, []);
+
   return (
     <div className="relative min-h-screen text-foreground">
       {/* DotField Background */}
@@ -38,10 +44,20 @@ export default function App() {
         <CommandPalette />
 
         <main className="pb-28 lg:pb-0">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <Suspense fallback={<div className="min-h-screen" />}>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route
+                path="/contact"
+                element={<Navigate to="/#contact" replace />}
+              />
+              <Route
+                path="/projects"
+                element={<Navigate to="/#projects" replace />}
+              />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
         </main>
 
         <Footer />
@@ -49,7 +65,7 @@ export default function App() {
       </div>
 
       <Suspense fallback={null}>
-        <PetBuddy />
+        {loadPetBuddy && <PetBuddy />}
       </Suspense>
     </div>
   );
