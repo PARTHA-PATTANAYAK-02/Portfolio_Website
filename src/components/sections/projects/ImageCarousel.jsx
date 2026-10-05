@@ -16,7 +16,9 @@ export default function ImageCarousel({
   const [index, setIndex] = useState(0);
   const [direction, setDirection] = useState(1);
   const [hovered, setHovered] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
   const timerRef = useRef(null);
+  const carouselRef = useRef(null);
 
   const hasMultiple = images.length > 1;
   const isCompact = size === "compact";
@@ -24,6 +26,21 @@ export default function ImageCarousel({
   useEffect(() => {
     setIndex(0);
   }, [images.length]);
+
+  useEffect(() => {
+    const carousel = carouselRef.current;
+    if (!carousel || !("IntersectionObserver" in window)) {
+      setIsVisible(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsVisible(entry.isIntersecting),
+      { threshold: 0.1 },
+    );
+    observer.observe(carousel);
+    return () => observer.disconnect();
+  }, []);
 
   /* Keyboard (modal only) */
   useEffect(() => {
@@ -39,13 +56,13 @@ export default function ImageCarousel({
 
   /* Auto-slide */
   useEffect(() => {
-    if (!hasMultiple || hovered) return;
+    if (!hasMultiple || hovered || !isVisible) return;
     timerRef.current = setInterval(() => {
       setDirection(1);
       setIndex((p) => (p + 1) % images.length);
     }, AUTO_SLIDE_MS);
     return () => clearInterval(timerRef.current);
-  }, [hasMultiple, hovered, images.length]);
+  }, [hasMultiple, hovered, images.length, isVisible]);
 
   const goNext = (e) => {
     if (e) e.stopPropagation();
@@ -72,6 +89,7 @@ export default function ImageCarousel({
 
   return (
     <div
+      ref={carouselRef}
       className={`relative overflow-hidden ${className}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}

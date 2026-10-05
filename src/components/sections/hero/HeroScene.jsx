@@ -966,7 +966,9 @@ function EngineeringGrid({ isDark }) {
 export default function HeroScene() {
   const [isMobile, setIsMobile] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
+  const [isScrolling, setIsScrolling] = useState(false);
   const sceneRef = useRef(null);
+  const scrollingRef = useRef(false);
 
   const scrollRef = useScrollProgress();
 
@@ -984,6 +986,27 @@ export default function HeroScene() {
 
     return () => {
       window.removeEventListener("resize", check);
+    };
+  }, []);
+
+  useEffect(() => {
+    let scrollTimer;
+    const pauseForScroll = () => {
+      if (!scrollingRef.current) {
+        scrollingRef.current = true;
+        setIsScrolling(true);
+      }
+      clearTimeout(scrollTimer);
+      scrollTimer = window.setTimeout(() => {
+        scrollingRef.current = false;
+        setIsScrolling(false);
+      }, 150);
+    };
+
+    window.addEventListener("scroll", pauseForScroll, { passive: true });
+    return () => {
+      clearTimeout(scrollTimer);
+      window.removeEventListener("scroll", pauseForScroll);
     };
   }, []);
 
@@ -1031,7 +1054,7 @@ export default function HeroScene() {
       <Canvas
         camera={camera}
         dpr={isMobile ? 1 : [1, 1.25]}
-        frameloop={isVisible ? "always" : "never"}
+        frameloop={isVisible && !isScrolling ? "always" : "never"}
         gl={{
           antialias: true,
           alpha: true,

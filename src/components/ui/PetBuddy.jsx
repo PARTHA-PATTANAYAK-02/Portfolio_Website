@@ -1456,6 +1456,9 @@ export default function PetBuddy() {
   useEffect(() => {
     if (!ready || !canvasRef.current) return;
     let renderer, raf = null, cat;
+    let scrollTimer = null;
+    let scrolling = false;
+    let lastRender = 0;
     try {
       renderer = new THREE.WebGLRenderer({
         canvas: canvasRef.current,
@@ -1503,8 +1506,19 @@ export default function PetBuddy() {
     let last = performance.now();
     const loop = (now) => {
       raf = null;
-      if (document.hidden || document.body.classList.contains("modal-open")) return;
+      if (
+        document.hidden ||
+        document.body.classList.contains("modal-open") ||
+        scrolling
+      )
+        return;
       raf = requestAnimationFrame(loop);
+
+      // The pet is decorative, so 30fps is enough and leaves more GPU time
+      // for the page itself.
+      if (now - lastRender < 1000 / 30) return;
+      lastRender = now;
+
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
       faceDir.current = cat.update(
@@ -1523,7 +1537,11 @@ export default function PetBuddy() {
       renderer.render(scene, camera);
     };
     const resume = () => {
-      if (document.hidden || document.body.classList.contains("modal-open")) {
+      if (
+        document.hidden ||
+        document.body.classList.contains("modal-open") ||
+        scrolling
+      ) {
         if (raf !== null) cancelAnimationFrame(raf);
         raf = null;
         return;
@@ -1533,17 +1551,30 @@ export default function PetBuddy() {
       last = performance.now();
       raf = requestAnimationFrame(loop);
     };
+    const pauseForScroll = () => {
+      scrolling = true;
+      if (raf !== null) cancelAnimationFrame(raf);
+      raf = null;
+      clearTimeout(scrollTimer);
+      scrollTimer = window.setTimeout(() => {
+        scrolling = false;
+        resume();
+      }, 150);
+    };
     const modalObserver = new MutationObserver(resume);
     modalObserver.observe(document.body, {
       attributes: true,
       attributeFilter: ["class"],
     });
     document.addEventListener("visibilitychange", resume);
+    window.addEventListener("scroll", pauseForScroll, { passive: true });
     resume();
     return () => {
       if (raf !== null) cancelAnimationFrame(raf);
+      clearTimeout(scrollTimer);
       modalObserver.disconnect();
       document.removeEventListener("visibilitychange", resume);
+      window.removeEventListener("scroll", pauseForScroll);
       catHitTest.current = null;
       envTex.dispose();
       pmrem.dispose();

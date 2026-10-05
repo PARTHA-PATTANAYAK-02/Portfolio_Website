@@ -32,6 +32,7 @@ const DotField = memo(
       lastMoveTime: 0,
     });
     const rafRef = useRef(null);
+    const scrollingRef = useRef(false);
     const sizeRef = useRef({ w: 0, h: 0, offsetX: 0, offsetY: 0 });
     const glowOpacity = useRef(0);
     const engagement = useRef(0);
@@ -80,8 +81,8 @@ const DotField = memo(
         sizeRef.current = {
           w,
           h,
-          offsetX: rect.left + window.scrollX,
-          offsetY: rect.top + window.scrollY,
+          offsetX: rect.left,
+          offsetY: rect.top,
         };
 
         buildDots(w, h);
@@ -120,8 +121,8 @@ const DotField = memo(
       function onMouseMove(e) {
         const s = sizeRef.current;
         const m = mouseRef.current;
-        const x = e.pageX - s.offsetX;
-        const y = e.pageY - s.offsetY;
+        const x = e.clientX - s.offsetX;
+        const y = e.clientY - s.offsetY;
         const now = performance.now();
 
         if (m.lastMoveTime > 0) {
@@ -134,7 +135,7 @@ const DotField = memo(
         m.x = x;
         m.y = y;
         m.lastMoveTime = now;
-        scheduleFrame();
+        if (!scrollingRef.current) scheduleFrame();
       }
 
       let frameCount = 0;
@@ -148,6 +149,7 @@ const DotField = memo(
 
       function tick(now) {
         rafRef.current = null;
+        if (scrollingRef.current) return;
         frameCount++;
         const dots = dotsRef.current;
         const m = mouseRef.current;
@@ -260,8 +262,23 @@ const DotField = memo(
       }
 
       doResize();
+      let scrollTimer;
+      const pauseForScroll = () => {
+        scrollingRef.current = true;
+        lastFrameTime = 0;
+        if (rafRef.current !== null) {
+          cancelAnimationFrame(rafRef.current);
+          rafRef.current = null;
+        }
+        clearTimeout(scrollTimer);
+        scrollTimer = window.setTimeout(() => {
+          scrollingRef.current = false;
+          scheduleFrame();
+        }, 150);
+      };
       window.addEventListener("resize", resize);
       window.addEventListener("mousemove", onMouseMove, { passive: true });
+      window.addEventListener("scroll", pauseForScroll, { passive: true });
 
       rebuildRef.current = () => {
         const { w, h } = sizeRef.current;
@@ -277,8 +294,10 @@ const DotField = memo(
           rafRef.current = null;
         }
         clearTimeout(resizeTimer);
+        clearTimeout(scrollTimer);
         window.removeEventListener("resize", resize);
         window.removeEventListener("mousemove", onMouseMove);
+        window.removeEventListener("scroll", pauseForScroll);
       };
     }, []);
 
