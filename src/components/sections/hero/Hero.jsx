@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion as Motion } from "framer-motion";
 import { ArrowRight, ExternalLink, Sparkles, MapPin } from "lucide-react";
@@ -11,8 +11,7 @@ import {
 } from "../../ui/BrandIcons";
 import TypingText from "./TypingText";
 import StatsRow from "./StatsRow";
-
-const HeroScene = lazy(() => import("./HeroScene"));
+import HeroTechConstellation from "./HeroTechConstellation";
 
 const TYPING_WORDS = [
   "Full Stack Developer",
@@ -52,7 +51,6 @@ const SOCIALS = [
 ];
 
 export default function Hero({ onReady }) {
-  const [sceneReady, setSceneReady] = useState(false);
   const [isDesktop, setIsDesktop] = useState(
     () => window.matchMedia("(min-width: 1024px)").matches,
   );
@@ -68,29 +66,6 @@ export default function Hero({ onReady }) {
     mediaQuery.addEventListener("change", updateDesktop);
     return () => mediaQuery.removeEventListener("change", updateDesktop);
   }, []);
-
-  useEffect(() => {
-    if (!isDesktop) return undefined;
-
-    let timeout;
-    let idleCallback;
-
-    if ("requestIdleCallback" in window) {
-      idleCallback = window.requestIdleCallback(
-        () => setSceneReady(true),
-        { timeout: 2500 },
-      );
-    } else {
-      timeout = window.setTimeout(() => setSceneReady(true), 1200);
-    }
-
-    return () => {
-      window.clearTimeout(timeout);
-      if (idleCallback !== undefined) {
-        window.cancelIdleCallback(idleCallback);
-      }
-    };
-  }, [isDesktop]);
 
   return (
     <section className="relative min-h-screen flex items-center pt-24 pb-14 sm:pt-28 sm:pb-20 overflow-hidden">
@@ -233,23 +208,14 @@ export default function Hero({ onReady }) {
             <StatsRow />
           </div>
 
-          {/* RIGHT — 3D Scene — simple, no tilt */}
+          {/* Desktop tech constellation */}
           <Motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.3, duration: 0.8, ease: "easeOut" }}
             className="relative hidden lg:block order-2 w-full h-[560px] overflow-visible"
           >
-            {sceneReady ? (
-              <Suspense fallback={null}>
-                <HeroScene isActive={isDesktop} />
-              </Suspense>
-            ) : isDesktop ? (
-              <div
-                aria-hidden="true"
-                className="absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(139,92,246,0.14),transparent_68%)]"
-              />
-            ) : null}
+            {isDesktop && <HeroTechConstellation />}
           </Motion.div>
         </div>
       </div>

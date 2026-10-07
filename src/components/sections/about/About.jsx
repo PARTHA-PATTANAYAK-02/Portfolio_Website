@@ -27,7 +27,6 @@ import {
   Zap,
   Mail,
   GraduationCap,
-  RotateCw,
 } from "lucide-react";
 import { LinkedinIcon, GithubIcon } from "../../ui/BrandIcons";
 import PhotoTilt from "./PhotoTilt";
@@ -244,141 +243,6 @@ function Label({ children }) {
   );
 }
 
-/* ---------------- 3D flip card (hover on desktop, tap on touch) ---------------- */
-function FlipCard({
-  icon: Icon,
-  title,
-  teaser,
-  tag,
-  chips = [],
-  back,
-  delay = 0,
-}) {
-  const [flipped, setFlipped] = useState(false);
-  const lastPointer = useRef("mouse");
-  const face =
-    "absolute inset-0 overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-white/95 via-white/90 to-violet-100/70 p-4 shadow-xl shadow-slate-900/10 backdrop-blur-xl dark:border-white/10 dark:from-slate-950/90 dark:via-slate-950/90 dark:to-[#1b1146]/90 dark:shadow-black/40 [backface-visibility:hidden]";
-
-  return (
-    <Motion.div
-      initial={{ opacity: 0, y: 40 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-50px" }}
-      transition={{ duration: 0.7, delay, ease: [0.22, 1, 0.36, 1] }}
-      style={{ perspective: 1400 }}
-      className="h-[250px]"
-    >
-      <div
-        role="button"
-        tabIndex={0}
-        aria-pressed={flipped}
-        aria-label={`${title}. Flip card for details`}
-        onPointerDown={(e) => (lastPointer.current = e.pointerType)}
-        onPointerEnter={(e) => e.pointerType === "mouse" && setFlipped(true)}
-        onPointerLeave={(e) => e.pointerType === "mouse" && setFlipped(false)}
-        onClick={() => lastPointer.current !== "mouse" && setFlipped((f) => !f)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            setFlipped((f) => !f);
-          }
-        }}
-        className="group/flip h-full w-full cursor-pointer rounded-3xl outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
-      >
-        <Motion.div
-          animate={{ rotateY: flipped ? 180 : 0, y: flipped ? -4 : 0 }}
-          transition={{ type: "spring", stiffness: 110, damping: 16 }}
-          style={{ transformStyle: "preserve-3d" }}
-          className="relative h-full w-full"
-        >
-          {/* FRONT */}
-          <div className={face}>
-            {/* background layers: dot grid, glows, giant watermark icon */}
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 opacity-[0.35] dark:opacity-[0.25]"
-              style={{
-                backgroundImage:
-                  "radial-gradient(hsl(262 83% 58% / 0.45) 1px, transparent 1px)",
-                backgroundSize: "18px 18px",
-                maskImage:
-                  "linear-gradient(to bottom left, black, transparent 70%)",
-                WebkitMaskImage:
-                  "linear-gradient(to bottom left, black, transparent 70%)",
-              }}
-            />
-            <div className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-primary/35 blur-3xl" />
-            <div className="pointer-events-none absolute -bottom-16 -left-8 h-36 w-36 rounded-full bg-amber-300/25 blur-3xl" />
-            <Icon
-              aria-hidden="true"
-              strokeWidth={1.2}
-              className="pointer-events-none absolute -bottom-5 -right-3 h-36 w-36 -rotate-12 text-primary/15 transition-transform duration-700 group-hover/flip:rotate-0"
-            />
-
-            <div className="relative flex h-full flex-col justify-between">
-              {/* top: icon + tag */}
-              <div className="flex items-start justify-between gap-3">
-                <Motion.div
-                  animate={{ y: [0, -4, 0] }}
-                  transition={{
-                    duration: 4,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                  }}
-                  className="grid h-11 w-11 place-items-center rounded-xl border border-amber-300/40 bg-gradient-to-br from-violet-500 via-primary to-fuchsia-500 text-white shadow-[0_14px_32px_-8px_rgba(139,92,246,0.7),inset_0_1px_0_rgba(255,255,255,0.4)]"
-                >
-                  <Icon className="h-5 w-5" />
-                </Motion.div>
-                {tag && (
-                  <span className="rounded-full border border-amber-300/40 bg-amber-300/10 px-2.5 py-1 font-mono text-[10px] font-semibold text-amber-700 dark:text-amber-300">
-                    {tag}
-                  </span>
-                )}
-              </div>
-
-              {/* middle: quick-glance chips */}
-              <div className="flex flex-wrap gap-1.5">
-                {chips.map((c) => (
-                  <span
-                    key={c}
-                    className="rounded-lg border border-border/70 bg-background/60 px-2 py-1 text-[11px] font-medium text-foreground/80 backdrop-blur-sm"
-                  >
-                    {c}
-                  </span>
-                ))}
-              </div>
-
-              {/* bottom: title, teaser, hint */}
-              <div>
-                <h3 className="font-display text-lg font-bold tracking-tight">
-                  {title}
-                </h3>
-                <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
-                  {teaser}
-                </p>
-                <p className="mt-2 inline-flex items-center gap-1.5 font-mono text-[10px] text-primary">
-                  <RotateCw className="h-3 w-3" />
-                  <span className="hidden sm:inline">Hover to flip</span>
-                  <span className="sm:hidden">Tap to flip</span>
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* BACK */}
-          <div className={face} style={{ transform: "rotateY(180deg)" }}>
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-amber-300/10" />
-            <div className="relative h-full overflow-auto">
-              <Label>{title}</Label>
-              {back}
-            </div>
-          </div>
-        </Motion.div>
-      </div>
-    </Motion.div>
-  );
-}
-
 /* ---------------- Main ---------------- */
 export default function About() {
   const reduce = useReducedMotion();
@@ -580,105 +444,161 @@ export default function About() {
           ))}
         </div>
 
-        {/* ===== 3. 3D flip deck ===== */}
+        {/* ===== 3. Education, achievements and interests ===== */}
         <div className="mt-6 grid gap-4 md:grid-cols-3">
-          <FlipCard
-            icon={GraduationCap}
-            title="Education"
-            teaser="B.Tech in Information Technology."
-            tag="2021–2025"
-            chips={["B.Tech", "Information Technology", "Kolaghat"]}
-            delay={0}
-            back={
-              <div className="relative pl-5">
-                <div className="absolute bottom-2 left-[5px] top-2 w-px bg-gradient-to-b from-primary via-primary/40 to-transparent" />
-                <div className="space-y-2.5">
-                  {EDUCATION.map((edu) => (
-                    <div key={edu.title} className="relative">
-                      <span
-                        className={`absolute -left-5 top-1.5 h-3 w-3 rounded-full border-2 bg-background ${
-                          edu.highlight
-                            ? "border-primary shadow-[0_0_10px_hsl(262_83%_58%_/_0.6)]"
-                            : "border-border"
-                        }`}
-                      />
-                      <div
-                        className={`font-mono text-[10px] ${edu.highlight ? "text-primary" : "text-muted-foreground"}`}
-                      >
-                        {edu.year}
-                      </div>
-                      <div
-                        className={`mt-0.5 text-xs ${edu.highlight ? "font-semibold" : "font-medium text-foreground/80"}`}
-                      >
-                        {edu.title}
-                      </div>
-                      <div className="text-[10px] leading-snug text-muted-foreground">
-                        {edu.place}
-                      </div>
-                    </div>
-                  ))}
+          <Motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-40px" }}
+            transition={{ duration: 0.55, delay: 0 }}
+            whileHover={{ y: -4 }}
+            className="group relative overflow-hidden rounded-3xl border border-border/70 bg-gradient-to-br from-card/95 via-card/85 to-violet-500/10 p-5 shadow-lg shadow-slate-900/5"
+          >
+            <div className="pointer-events-none absolute -right-12 -top-16 h-36 w-36 rounded-full bg-primary/15 blur-3xl transition-opacity group-hover:opacity-80" />
+            <div className="relative">
+              <div className="mb-5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="grid h-10 w-10 place-items-center rounded-xl border border-primary/25 bg-primary/10 text-primary">
+                    <GraduationCap className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <h3 className="font-display text-lg font-bold">Education</h3>
+                    <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
+                      Academic journey
+                    </p>
+                  </div>
                 </div>
+                <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 font-mono text-[9px] text-primary">
+                  2021–2025
+                </span>
               </div>
-            }
-          />
-
-          <FlipCard
-            icon={Award}
-            title="Achievements"
-            teaser="Hackathons, certifications and DSA."
-            tag="4 highlights"
-            chips={["GHCI 2025", "NCET", "HP LIFE", "500+ DSA"]}
-            delay={0.1}
-            back={
-              <div className="space-y-1.5">
-                {ACHIEVEMENTS.map((a) => (
-                  <div
-                    key={a.title}
-                    className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 ${a.bg} ${a.border}`}
-                  >
+              <div className="relative space-y-4 pl-5">
+                <div className="absolute bottom-2 left-[5px] top-2 w-px bg-gradient-to-b from-primary via-primary/40 to-border" />
+                {EDUCATION.map((edu) => (
+                  <div key={edu.title} className="relative">
                     <span
-                      className={`rounded-md border bg-background/50 p-1 ${a.border}`}
+                      className={`absolute -left-5 top-1.5 h-3 w-3 rounded-full border-2 bg-background ${
+                        edu.highlight
+                          ? "border-primary shadow-[0_0_10px_hsl(262_83%_58%_/_0.6)]"
+                          : "border-border"
+                      }`}
+                    />
+                    <div
+                      className={`font-mono text-[10px] ${edu.highlight ? "text-primary" : "text-muted-foreground"}`}
                     >
-                      <Award className={`h-3.5 w-3.5 ${a.color}`} />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block truncate text-xs font-bold">
-                        {a.title}
-                      </span>
-                      <span className="block truncate text-[10px] text-muted-foreground">
-                        {a.sub}
-                      </span>
-                    </span>
+                      {edu.year}
+                    </div>
+                    <div
+                      className={`mt-0.5 text-xs ${edu.highlight ? "font-semibold text-foreground" : "font-medium text-foreground/80"}`}
+                    >
+                      {edu.title}
+                    </div>
+                    <div className="text-[10px] leading-snug text-muted-foreground">
+                      {edu.place}
+                    </div>
                   </div>
                 ))}
               </div>
-            }
-          />
+            </div>
+          </Motion.div>
 
-          <FlipCard
-            icon={Gamepad2}
-            title="Hobbies"
-            teaser="What I do away from the keyboard."
-            tag="4 interests"
-            chips={["Gaming", "Music", "Cricket", "Travel"]}
-            delay={0.2}
-            back={
-              <div className="grid grid-cols-2 gap-2">
-                {HOBBIES.map((h) => {
-                  const Icon = h.icon;
+          <Motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-40px" }}
+            transition={{ duration: 0.55, delay: 0.1 }}
+            whileHover={{ y: -4 }}
+            className="group relative overflow-hidden rounded-3xl border border-border/70 bg-gradient-to-br from-card/95 via-card/85 to-amber-500/10 p-5 shadow-lg shadow-slate-900/5"
+          >
+            <div className="pointer-events-none absolute -right-12 -top-16 h-36 w-36 rounded-full bg-amber-400/15 blur-3xl" />
+            <div className="relative">
+              <div className="mb-5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="grid h-10 w-10 place-items-center rounded-xl border border-amber-500/25 bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                    <Award className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <h3 className="font-display text-lg font-bold">
+                      Achievements
+                    </h3>
+                    <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
+                      Highlights & milestones
+                    </p>
+                  </div>
+                </div>
+                <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 font-mono text-[9px] text-amber-700 dark:text-amber-300">
+                  {ACHIEVEMENTS.length} highlights
+                </span>
+              </div>
+              <div className="space-y-2">
+                {ACHIEVEMENTS.map((achievement) => (
+                  <div
+                    key={achievement.title}
+                    className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-transform hover:translate-x-1 ${achievement.bg} ${achievement.border}`}
+                  >
+                    <span className={`shrink-0 ${achievement.color}`}>
+                      <Award className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-xs font-bold">
+                        {achievement.title}
+                      </span>
+                      <span className="block truncate text-[10px] text-muted-foreground">
+                        {achievement.sub}
+                      </span>
+                    </span>
+                    <ArrowRight className="ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Motion.div>
+
+          <Motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-40px" }}
+            transition={{ duration: 0.55, delay: 0.2 }}
+            whileHover={{ y: -4 }}
+            className="group relative overflow-hidden rounded-3xl border border-border/70 bg-gradient-to-br from-card/95 via-card/85 to-cyan-500/10 p-5 shadow-lg shadow-slate-900/5"
+          >
+            <div className="pointer-events-none absolute -right-12 -top-16 h-36 w-36 rounded-full bg-cyan-400/15 blur-3xl" />
+            <div className="relative">
+              <div className="mb-5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="grid h-10 w-10 place-items-center rounded-xl border border-cyan-500/25 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300">
+                    <Gamepad2 className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <h3 className="font-display text-lg font-bold">Hobbies</h3>
+                    <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
+                      Away from the keyboard
+                    </p>
+                  </div>
+                </div>
+                <span className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-2.5 py-1 font-mono text-[9px] text-cyan-700 dark:text-cyan-300">
+                  Off-duty
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                {HOBBIES.map((hobby) => {
+                  const Icon = hobby.icon;
                   return (
                     <div
-                      key={h.label}
-                      className="flex flex-col items-center gap-1.5 rounded-xl border border-border/60 bg-background/50 px-3 py-3"
+                      key={hobby.label}
+                      className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-background/55 px-3 py-3 transition-colors hover:border-primary/40 hover:bg-primary/5"
                     >
-                      <Icon className={`h-5 w-5 ${h.color}`} />
-                      <span className="text-xs font-medium">{h.label}</span>
+                      <Icon className={`h-4 w-4 shrink-0 ${hobby.color}`} />
+                      <span className="text-xs font-medium">{hobby.label}</span>
                     </div>
                   );
                 })}
               </div>
-            }
-          />
+              <p className="mt-4 border-t border-border/60 pt-3 text-[10px] leading-relaxed text-muted-foreground">
+                A little balance outside of building and problem-solving.
+              </p>
+            </div>
+          </Motion.div>
         </div>
       </div>
     </section>
