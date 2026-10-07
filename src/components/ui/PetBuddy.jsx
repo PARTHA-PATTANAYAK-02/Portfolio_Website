@@ -2034,13 +2034,12 @@ export default function PetBuddy() {
     };
     const onScroll = () => {
       if (flags.current.sleeping || flags.current.landing) return;
+      if (!once("scroll", 7000)) return;
       lookY.set(Math.random() < 0.5 ? 0.9 : -0.9);
-      if (once("scroll", 7000)) {
-        say(pick(SCROLL), 1700);
-        feel("shock", 700);
-        setTwitch("l");
-        setTimeout(() => setTwitch(null), 500);
-      }
+      say(pick(SCROLL), 1700);
+      feel("shock", 700);
+      setTwitch("l");
+      setTimeout(() => setTwitch(null), 500);
     };
     const onKey = (e) => {
       if (e.key === "Escape" && helperOpen) {

@@ -1,7 +1,7 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion as Motion } from "framer-motion";
-import { ArrowRight, Download, Sparkles, MapPin } from "lucide-react";
+import { ArrowRight, ExternalLink, Sparkles, MapPin } from "lucide-react";
 import {
   GithubIcon,
   LinkedinIcon,
@@ -20,6 +20,8 @@ const TYPING_WORDS = [
   "Java Developer",
   "Problem Solver",
 ];
+const RESUME_URL =
+  "https://drive.google.com/drive/folders/1rawC4WT_wXNY7aiTJYWIVnhXPCbBSGD1?usp=sharing";
 
 const SOCIALS = [
   {
@@ -49,33 +51,69 @@ const SOCIALS = [
   },
 ];
 
-export default function Hero() {
+export default function Hero({ onReady }) {
+  const [sceneReady, setSceneReady] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(
+    () => window.matchMedia("(min-width: 1024px)").matches,
+  );
+
+  useEffect(() => {
+    onReady?.();
+  }, [onReady]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 1024px)");
+    const updateDesktop = (event) => setIsDesktop(event.matches);
+    updateDesktop(mediaQuery);
+    mediaQuery.addEventListener("change", updateDesktop);
+    return () => mediaQuery.removeEventListener("change", updateDesktop);
+  }, []);
+
+  useEffect(() => {
+    if (!isDesktop) return undefined;
+
+    let timeout;
+    let idleCallback;
+
+    if ("requestIdleCallback" in window) {
+      idleCallback = window.requestIdleCallback(
+        () => setSceneReady(true),
+        { timeout: 2500 },
+      );
+    } else {
+      timeout = window.setTimeout(() => setSceneReady(true), 1200);
+    }
+
+    return () => {
+      window.clearTimeout(timeout);
+      if (idleCallback !== undefined) {
+        window.cancelIdleCallback(idleCallback);
+      }
+    };
+  }, [isDesktop]);
+
   return (
     <section className="relative min-h-screen flex items-center pt-24 pb-14 sm:pt-28 sm:pb-20 overflow-hidden">
       {/* Background gradient orbs — subtle, static-ish */}
       <div className="absolute inset-0 -z-10 pointer-events-none">
-        <Motion.div
+        <div
           className="absolute top-[10%] left-[5%] w-[500px] h-[500px] rounded-full blur-[140px] opacity-20"
           style={{
             background:
               "radial-gradient(circle, hsl(262 83% 58%), transparent 70%)",
           }}
-          animate={{ x: [0, 50, 0], y: [0, -30, 0] }}
-          transition={{ duration: 14, repeat: Infinity, ease: "easeInOut" }}
         />
-        <Motion.div
+        <div
           className="absolute bottom-[10%] right-[5%] w-[450px] h-[450px] rounded-full blur-[140px] opacity-20"
           style={{
             background:
               "radial-gradient(circle, hsl(190 90% 55%), transparent 70%)",
           }}
-          animate={{ x: [0, -50, 0], y: [0, 30, 0] }}
-          transition={{ duration: 16, repeat: Infinity, ease: "easeInOut" }}
         />
       </div>
 
       <div className="container-custom w-full">
-        <div className="grid lg:grid-cols-2 gap-4 sm:gap-8 lg:gap-8 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8 lg:gap-8 items-center">
           {/* LEFT — Content */}
           <div className="relative z-10 order-1 lg:order-1">
             <Motion.div
@@ -149,12 +187,13 @@ export default function Hero() {
               </MagneticLink>
 
               <a
-                href="/Partha_Resume.pdf"
-                download
+                href={RESUME_URL}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-border glass text-sm font-semibold hover:border-primary/50 hover:bg-primary/5 transition-all"
               >
-                <Download className="w-4 h-4" />
-                Download CV
+                <ExternalLink className="w-4 h-4" />
+                View CV
               </a>
             </Motion.div>
 
@@ -199,11 +238,18 @@ export default function Hero() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.3, duration: 0.8, ease: "easeOut" }}
-            className="relative order-2 lg:order-2 w-full h-[clamp(280px,78vw,360px)] sm:h-[440px] lg:h-[560px] overflow-visible"
+            className="relative hidden lg:block order-2 w-full h-[560px] overflow-visible"
           >
-            <Suspense fallback={null}>
-              <HeroScene />
-            </Suspense>
+            {sceneReady ? (
+              <Suspense fallback={null}>
+                <HeroScene isActive={isDesktop} />
+              </Suspense>
+            ) : isDesktop ? (
+              <div
+                aria-hidden="true"
+                className="absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(139,92,246,0.14),transparent_68%)]"
+              />
+            ) : null}
           </Motion.div>
         </div>
       </div>

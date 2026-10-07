@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
 import { motion as Motion, useReducedMotion } from "framer-motion";
 import { Home, Code2, FolderKanban, Route, Mail } from "lucide-react";
 import { useTheme } from "../providers/ThemeContext";
+import { useActiveSection } from "../../hooks/useActiveSection";
 
 const MOBILE_ITEMS = [
   { label: "Home", id: "home", icon: Home },
@@ -10,6 +10,7 @@ const MOBILE_ITEMS = [
   { label: "Journey", id: "journey", icon: Route },
   { label: "Contact", id: "contact", icon: Mail },
 ];
+const MOBILE_ACTIVE_IDS = MOBILE_ITEMS.map((item) => item.id);
 
 const SPRING = {
   type: "spring",
@@ -23,28 +24,7 @@ export default function MobileBottomNav() {
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const reduce = useReducedMotion();
-  const [active, setActive] = useState("home");
-
-  useEffect(() => {
-    const observers = [];
-
-    MOBILE_ITEMS.forEach(({ id }) => {
-      const el = document.getElementById(id);
-      if (!el) return;
-
-      const observer = new IntersectionObserver(
-        ([entry]) => {
-          if (entry.isIntersecting) setActive(id);
-        },
-        { rootMargin: "-45% 0px -50% 0px", threshold: 0 },
-      );
-
-      observer.observe(el);
-      observers.push(observer);
-    });
-
-    return () => observers.forEach((observer) => observer.disconnect());
-  }, []);
+  const [active, setActive] = useActiveSection(MOBILE_ACTIVE_IDS);
 
   const scrollTo = (id) => {
     const el = document.getElementById(id);

@@ -92,8 +92,8 @@
 
 @layer utilities {
     .glass {
-        backdrop-filter: blur(24px) saturate(200%);
-        -webkit-backdrop-filter: blur(24px) saturate(200%);
+        backdrop-filter: blur(16px) saturate(160%);
+        -webkit-backdrop-filter: blur(16px) saturate(160%);
         background-color: hsl(0 0% 100% / 0.7);
         border: 1px solid hsl(214 32% 91% / 0.8);
         transition: background-color 450ms ease, border-color 450ms ease, box-shadow 450ms ease;
@@ -134,6 +134,17 @@
         .container-custom {
             padding-inline: 2rem;
         }
+    }
+}
+
+@media (max-width: 767px) {
+    .glass {
+        backdrop-filter: blur(10px) saturate(140%);
+        -webkit-backdrop-filter: blur(10px) saturate(140%);
+    }
+
+    .backdrop-blur-xl {
+        --tw-backdrop-blur: blur(12px);
     }
 }
 

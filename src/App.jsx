@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { Navigate, Routes, Route } from "react-router-dom";
 
 import Navbar from "./components/layout/Navbar";
@@ -13,11 +13,47 @@ const PetBuddy = lazy(() => import("./components/ui/PetBuddy"));
 
 export default function App() {
   const [loadPetBuddy, setLoadPetBuddy] = useState(false);
+  const [routeReady, setRouteReady] = useState(false);
+  const [minimumSplashElapsed, setMinimumSplashElapsed] = useState(false);
+
+  const markRouteReady = useCallback(() => setRouteReady(true), []);
 
   useEffect(() => {
-    const timeout = window.setTimeout(() => setLoadPetBuddy(true), 3000);
-    return () => window.clearTimeout(timeout);
+    const splashTimer = window.setTimeout(
+      () => setMinimumSplashElapsed(true),
+      700,
+    );
+    let timeout;
+    let idleCallback;
+
+    if ("requestIdleCallback" in window) {
+      idleCallback = window.requestIdleCallback(
+        () => setLoadPetBuddy(true),
+        { timeout: 6000 },
+      );
+    } else {
+      timeout = window.setTimeout(() => setLoadPetBuddy(true), 4500);
+    }
+
+    return () => {
+      window.clearTimeout(splashTimer);
+      window.clearTimeout(timeout);
+      if (idleCallback !== undefined) {
+        window.cancelIdleCallback(idleCallback);
+      }
+    };
   }, []);
+
+  useEffect(() => {
+    if (!routeReady || !minimumSplashElapsed) return undefined;
+
+    const splash = document.getElementById("app-splash");
+    if (!splash) return undefined;
+
+    splash.classList.add("is-hidden");
+    const removeTimer = window.setTimeout(() => splash.remove(), 450);
+    return () => window.clearTimeout(removeTimer);
+  }, [routeReady, minimumSplashElapsed]);
 
   return (
     <div className="relative min-h-screen text-foreground">
@@ -25,7 +61,7 @@ export default function App() {
       <div className="fixed inset-0 z-0 pointer-events-none">
         <DotField
           dotRadius={1.5}
-          dotSpacing={16}
+          dotSpacing={22}
           bulgeStrength={80}
           glowRadius={180}
           sparkle={false}
@@ -46,7 +82,7 @@ export default function App() {
         <main className="pb-28 lg:pb-0">
           <Suspense fallback={<div className="min-h-screen" />}>
             <Routes>
-              <Route path="/" element={<Home />} />
+              <Route path="/" element={<Home onReady={markRouteReady} />} />
               <Route
                 path="/contact"
                 element={<Navigate to="/#contact" replace />}
@@ -55,7 +91,10 @@ export default function App() {
                 path="/projects"
                 element={<Navigate to="/#projects" replace />}
               />
-              <Route path="*" element={<NotFound />} />
+              <Route
+                path="*"
+                element={<NotFound onReady={markRouteReady} />}
+              />
             </Routes>
           </Suspense>
         </main>

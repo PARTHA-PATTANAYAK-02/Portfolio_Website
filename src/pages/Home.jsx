@@ -53,7 +53,7 @@ function DeferredSection({ id, component: Component, minHeight = "40rem" }) {
   );
 }
 
-export default function Home() {
+export default function Home({ onReady }) {
   const location = useLocation();
 
   useEffect(() => {
@@ -72,7 +72,7 @@ export default function Home() {
     <>
       <div id="home" className="scroll-mt-20">
         <Suspense fallback={<div className="min-h-screen" />}>
-          <Hero />
+          <Hero onReady={onReady} />
         </Suspense>
       </div>
 

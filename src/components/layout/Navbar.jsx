@@ -20,6 +20,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { useTheme } from "../providers/ThemeContext";
+import { useActiveSection } from "../../hooks/useActiveSection";
 
 const NAV_ITEMS = [
   { label: "Home", id: "home", icon: Home },
@@ -30,6 +31,7 @@ const NAV_ITEMS = [
   { label: "Certifications", id: "certifications", icon: Award },
   { label: "Contact", id: "contact", icon: Mail },
 ];
+const NAV_ACTIVE_IDS = NAV_ITEMS.map((item) => item.id);
 
 const SPRING = { stiffness: 360, damping: 24, mass: 0.55 };
 
@@ -38,7 +40,7 @@ export default function Navbar() {
   const reduce = useReducedMotion();
   const isDark = theme === "dark";
   const [scrolled, setScrolled] = useState(false);
-  const [active, setActive] = useState("home");
+  const [active, setActive] = useActiveSection(NAV_ACTIVE_IDS);
   const [hovered, setHovered] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -58,24 +60,10 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  useEffect(() => {
-    const observers = [];
-    NAV_ITEMS.forEach(({ id }) => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      const observer = new IntersectionObserver(
-        ([entry]) => entry.isIntersecting && setActive(id),
-        { rootMargin: "-42% 0px -50% 0px", threshold: 0 },
-      );
-      observer.observe(el);
-      observers.push(observer);
-    });
-    return () => observers.forEach((observer) => observer.disconnect());
-  }, []);
-
   const scrollTo = (id) => {
     const el = document.getElementById(id);
     if (!el) return;
+    setActive(id);
     const y = el.getBoundingClientRect().top + window.scrollY - 90;
     window.scrollTo({ top: y, behavior: "smooth" });
     setMobileOpen(false);

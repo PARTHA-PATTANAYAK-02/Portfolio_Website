@@ -22,7 +22,7 @@ import {
   Trophy,
   Plane,
   ArrowRight,
-  Download,
+  ExternalLink,
   Award,
   Zap,
   Mail,
@@ -213,8 +213,6 @@ function GlowCard({
             background:
               "conic-gradient(from 0deg, transparent 0 55%, rgba(232,200,135,0.9) 74%, rgba(139,92,246,0.9) 88%, transparent 100%)",
           }}
-          animate={reduce ? undefined : { rotate: 360 }}
-          transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
         />
         <div className="absolute inset-0 bg-slate-200/80 dark:bg-white/10" />
       </div>
@@ -519,15 +517,16 @@ export default function About() {
               </Motion.button>
 
               <Motion.a
-                href="/Partha_Resume.pdf"
-                download
+                href="https://drive.google.com/drive/folders/1rawC4WT_wXNY7aiTJYWIVnhXPCbBSGD1?usp=sharing"
+                target="_blank"
+                rel="noopener noreferrer"
                 whileHover={{ y: -3, scale: 1.04 }}
                 whileTap={{ scale: 0.96 }}
                 style={{ translateZ: 40 }}
                 className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card/50 px-5 py-2.5 text-xs font-semibold backdrop-blur-md hover:border-primary/50"
               >
-                <Download className="h-3.5 w-3.5" />
-                Resume
+                <ExternalLink className="h-3.5 w-3.5" />
+                View resume
               </Motion.a>
 
               {[

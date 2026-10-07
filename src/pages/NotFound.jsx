@@ -26,15 +26,16 @@ const QUICK_LINKS = [
   { label: "Contact", path: "/#contact", icon: Mail },
 ];
 
-export default function NotFound() {
+export default function NotFound({ onReady }) {
   const [msgIndex, setMsgIndex] = useState(0);
 
   useEffect(() => {
+    onReady?.();
     const id = setInterval(() => {
       setMsgIndex((p) => (p + 1) % MESSAGES.length);
     }, 3000);
     return () => clearInterval(id);
-  }, []);
+  }, [onReady]);
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-24 pb-32 lg:pb-16">

@@ -6,6 +6,7 @@ import { Float, Grid, Html, Line, Sparkles, Text } from "@react-three/drei";
 
 import * as THREE from "three";
 import { useTheme } from "../../providers/ThemeContext";
+import "./HeroScene.css";
 
 import {
   SiReact,
@@ -82,7 +83,7 @@ const TECH_STACK = [
     subtitle: "Development",
     color: "#22D3EE",
     icon: null,
-    position: [1.0, -2.85, -0.45],
+    position: [1.0, -2.5, -0.45],
   },
 ];
 
@@ -113,6 +114,20 @@ function useScrollProgress() {
   }, []);
 
   return ref;
+}
+
+function SceneFrameScheduler({ active }) {
+  const invalidate = useThree((state) => state.invalidate);
+
+  useEffect(() => {
+    if (!active) return undefined;
+
+    invalidate();
+    const interval = window.setInterval(invalidate, 1000 / 30);
+    return () => window.clearInterval(interval);
+  }, [active, invalidate]);
+
+  return null;
 }
 
 /* =========================================================
@@ -963,8 +978,7 @@ function EngineeringGrid({ isDark }) {
    MAIN HERO SCENE
 ========================================================= */
 
-export default function HeroScene() {
-  const [isMobile, setIsMobile] = useState(false);
+export default function HeroScene({ isActive = true }) {
   const [isVisible, setIsVisible] = useState(true);
   const [isScrolling, setIsScrolling] = useState(false);
   const sceneRef = useRef(null);
@@ -974,20 +988,6 @@ export default function HeroScene() {
 
   const { theme } = useTheme();
   const isDark = theme === "dark";
-
-  useEffect(() => {
-    const check = () => {
-      setIsMobile(window.innerWidth < 1024);
-    };
-
-    check();
-
-    window.addEventListener("resize", check);
-
-    return () => {
-      window.removeEventListener("resize", check);
-    };
-  }, []);
 
   useEffect(() => {
     let scrollTimer;
@@ -1030,31 +1030,61 @@ export default function HeroScene() {
   const camera = useMemo(
     () => ({
       position: [0, 0.35, 10],
-      fov: isMobile ? 52 : 48,
+      fov: 48,
       near: 0.1,
       far: 100,
     }),
-    [isMobile],
+    [],
   );
 
   return (
     <div
       ref={sceneRef}
-      className={isMobile ? "hero-scene hero-scene-mobile" : "hero-scene"}
+      className="hero-scene hero-scene-stage"
       style={{
         position: "absolute",
         top: 0,
         bottom: 0,
-        left: isMobile ? "0" : "-18%",
-        right: isMobile ? "0" : "-4%",
+        left: "-18%",
+        right: "-4%",
         overflow: "visible",
         pointerEvents: "auto",
       }}
     >
+      <div className="hero-scene-topbar" aria-hidden="true">
+        <div className="hero-scene-brand">
+          <span className="hero-scene-brand-mark">{"</>"}</span>
+          <span>
+            <strong>PARTHA / DEV</strong>
+            <small>INTERACTIVE STACK MAP</small>
+          </span>
+        </div>
+        <span className="hero-scene-status">
+          <i />
+          SYSTEM ONLINE
+        </span>
+      </div>
+
+      <div className="hero-scene-side-label hero-scene-side-label-left" aria-hidden="true">
+        <span>01</span> FRONTEND
+      </div>
+      <div className="hero-scene-side-label hero-scene-side-label-right" aria-hidden="true">
+        BACKEND <span>02</span>
+      </div>
+
+      <div className="hero-scene-footer" aria-hidden="true">
+        <span className="hero-scene-footer-title">BUILT TO CONNECT</span>
+        <span className="hero-scene-footer-divider" />
+        <span>REACT</span>
+        <span>NODE.JS</span>
+        <span>MONGODB</span>
+        <span className="hero-scene-footer-more">+ JAVA / REST / MYSQL</span>
+      </div>
+
       <Canvas
         camera={camera}
-        dpr={isMobile ? 1 : [1, 1.25]}
-        frameloop={isVisible && !isScrolling ? "always" : "never"}
+        dpr={[1, 1.1]}
+        frameloop={isActive && isVisible ? "demand" : "never"}
         gl={{
           antialias: true,
           alpha: true,
@@ -1062,6 +1092,9 @@ export default function HeroScene() {
         }}
       >
         <Suspense fallback={null}>
+          <SceneFrameScheduler
+            active={isActive && isVisible && !isScrolling}
+          />
           <ambientLight intensity={isDark ? 0.42 : 0.7} />
 
           <pointLight
@@ -1088,13 +1121,13 @@ export default function HeroScene() {
           <EngineeringGrid isDark={isDark} />
 
           <RotatingArchitecture
-            isMobile={isMobile}
+            isMobile={false}
             isDark={isDark}
             scrollRef={scrollRef}
           />
 
           <Sparkles
-            count={isMobile ? 30 : 80}
+            count={42}
             scale={[10, 8, 8]}
             size={1.25}
             speed={0.18}
@@ -1103,7 +1136,7 @@ export default function HeroScene() {
           />
 
           <Sparkles
-            count={isMobile ? 12 : 30}
+            count={14}
             scale={[7, 6, 6]}
             size={2}
             speed={0.1}
