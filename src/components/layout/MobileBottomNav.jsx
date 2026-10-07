@@ -1,13 +1,24 @@
+import { useEffect, useState } from "react";
 import { motion as Motion, useReducedMotion } from "framer-motion";
-import { Home, Code2, FolderKanban, Route, Mail } from "lucide-react";
+import {
+  Home,
+  UserRound,
+  Code2,
+  FolderKanban,
+  Route,
+  Award,
+  Mail,
+} from "lucide-react";
 import { useTheme } from "../providers/ThemeContext";
 import { useActiveSection } from "../../hooks/useActiveSection";
 
 const MOBILE_ITEMS = [
   { label: "Home", id: "home", icon: Home },
+  { label: "About", id: "about", icon: UserRound },
   { label: "Skills", id: "skills", icon: Code2 },
   { label: "Projects", id: "projects", icon: FolderKanban },
   { label: "Journey", id: "journey", icon: Route },
+  { label: "Certs", id: "certifications", icon: Award },
   { label: "Contact", id: "contact", icon: Mail },
 ];
 const MOBILE_ACTIVE_IDS = MOBILE_ITEMS.map((item) => item.id);
@@ -24,7 +35,17 @@ export default function MobileBottomNav() {
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const reduce = useReducedMotion();
+  const [isMobile, setIsMobile] = useState(() =>
+    window.matchMedia("(max-width: 900px)").matches,
+  );
   const [active, setActive] = useActiveSection(MOBILE_ACTIVE_IDS);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 900px)");
+    const updateViewport = (event) => setIsMobile(event.matches);
+    media.addEventListener("change", updateViewport);
+    return () => media.removeEventListener("change", updateViewport);
+  }, []);
 
   const scrollTo = (id) => {
     const el = document.getElementById(id);
@@ -59,7 +80,7 @@ export default function MobileBottomNav() {
           <Motion.div
             aria-hidden="true"
             className="absolute left-1/2 top-1/2 aspect-square w-[150%] -translate-x-1/2 -translate-y-1/2 bg-[conic-gradient(from_0deg,transparent_0_55%,rgba(139,92,246,.9)_72%,rgba(217,70,239,.75)_88%,rgba(59,130,246,.65)_96%,transparent_100%)]"
-            animate={reduce ? undefined : { rotate: 360 }}
+            animate={reduce || isMobile ? undefined : { rotate: 360 }}
             transition={{
               duration: 10,
               repeat: Infinity,
@@ -78,7 +99,7 @@ export default function MobileBottomNav() {
         {/* Same compact pill structure as the earlier version */}
         <div
           className={[
-            "relative flex items-center justify-around gap-1 overflow-hidden rounded-full px-2 py-2 backdrop-blur-2xl",
+            "relative flex items-center justify-between gap-0.5 overflow-hidden rounded-full px-1 py-2 backdrop-blur-2xl",
             isDark
               ? "bg-slate-950/85 shadow-[inset_0_1px_0_rgba(255,255,255,.08),0_18px_50px_-25px_rgba(0,0,0,.9)]"
               : "bg-white/85 shadow-[inset_0_1px_0_rgba(255,255,255,.95),0_18px_50px_-25px_rgba(76,29,149,.3)]",
@@ -99,8 +120,8 @@ export default function MobileBottomNav() {
                 aria-label={item.label}
                 aria-current={isActive ? "page" : undefined}
                 className={[
-                  "relative flex items-center justify-center gap-1.5 rounded-full py-2.5 text-xs font-medium",
-                  isActive ? "px-4" : "px-3",
+                  "relative flex min-w-0 flex-1 items-center justify-center gap-1 rounded-full py-2.5 text-xs font-medium",
+                  isActive ? "px-2" : "px-1.5",
                 ].join(" ")}
               >
                 {isActive && (

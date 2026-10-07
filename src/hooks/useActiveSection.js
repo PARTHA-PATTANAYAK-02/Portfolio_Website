@@ -1,15 +1,5 @@
 import { useEffect, useState } from "react";
 
-const SECTION_IDS = [
-  "home",
-  "about",
-  "skills",
-  "projects",
-  "journey",
-  "certifications",
-  "contact",
-];
-
 export function useActiveSection(activeIds) {
   const [active, setActive] = useState("home");
 
@@ -24,12 +14,11 @@ export function useActiveSection(activeIds) {
         const activationLine = window.innerHeight * 0.38;
         let nextActive = activeIds[0] ?? "home";
 
-        for (const id of SECTION_IDS) {
+        for (const id of activeIds) {
           const section = document.getElementById(id);
           if (
             section &&
-            section.getBoundingClientRect().top <= activationLine &&
-            activeIds.includes(id)
+            section.getBoundingClientRect().top <= activationLine
           ) {
             nextActive = id;
           }

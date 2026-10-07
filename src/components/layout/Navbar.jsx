@@ -39,6 +39,9 @@ export default function Navbar() {
   const { theme } = useTheme();
   const reduce = useReducedMotion();
   const isDark = theme === "dark";
+  const [isMobile, setIsMobile] = useState(() =>
+    window.matchMedia("(max-width: 900px)").matches,
+  );
   const [scrolled, setScrolled] = useState(false);
   const [active, setActive] = useActiveSection(NAV_ACTIVE_IDS);
   const [hovered, setHovered] = useState(null);
@@ -52,6 +55,13 @@ export default function Navbar() {
 
   const ambientX = useTransform(smoothX, [0, 1], [-18, 18]);
   const ambientY = useTransform(smoothY, [0, 1], [-8, 8]);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 900px)");
+    const updateViewport = (event) => setIsMobile(event.matches);
+    media.addEventListener("change", updateViewport);
+    return () => media.removeEventListener("change", updateViewport);
+  }, []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 30);
@@ -97,14 +107,17 @@ export default function Navbar() {
         >
           <div className="nav-liquid-border" aria-hidden="true" />
           <div className="nav-ribbon-glow" aria-hidden="true" />
-          <ParticleField reduce={reduce} />
+          <ParticleField reduce={reduce || isMobile} />
 
           <Motion.div
             className="nav-content"
             style={{ x: reduce ? 0 : ambientX, y: reduce ? 0 : ambientY }}
             transition={{ type: "spring", ...SPRING }}
           >
-            <Brand3D onClick={() => scrollTo("home")} reduce={reduce} />
+            <Brand3D
+              onClick={() => scrollTo("home")}
+              reduce={reduce || isMobile}
+            />
 
             <nav className="nav-links" aria-label="Primary navigation">
               {NAV_ITEMS.map((item) => (
@@ -442,5 +455,6 @@ const styles = `
 .mobile-link{width:100%;height:48px;display:flex;align-items:center;gap:11px;border:0;background:transparent;border-radius:14px;padding:0 15px;color:inherit;cursor:pointer;opacity:.7;font:600 13px "Inter",sans-serif;}.mobile-link.active{opacity:1;background:rgba(124,58,237,.13);color:hsl(262 83% 58%);}
 @media(max-width:1150px){.nav-item{padding:0 9px}.nav-item-label{font-size:11px}.brand-name{display:none}.nav-content{gap:10px}.magnetic-btn span,.magnetic-btn kbd{display:none}.magnetic-btn{width:40px;justify-content:center;padding:0}.nav-actions{gap:5px;}}
 @media(max-width:900px){.nav-links,.nav-actions{display:none}.mobile-trigger{display:block;margin-left:auto}.mobile-panel{display:block}.partha-nav{height:68px}.nav-content{padding:0 13px}.brand-name{display:flex;}}
+@media(max-width:900px){.nav-liquid-border{animation:none}.nav-ribbon-glow{filter:none}}
 @media(max-width:520px){.brand-name small{display:none}.brand-name strong{font-size:14px}.brand-core{width:48px;height:48px}.brand-p,.brand-depth{font-size:28px}.brand-orbit{transform:scale(.9) rotateX(66deg) rotateZ(20deg)} }
 `;

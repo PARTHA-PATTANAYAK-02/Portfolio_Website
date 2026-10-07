@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   motion as Motion,
   useMotionValue,
@@ -8,26 +8,40 @@ import {
   useReducedMotion,
 } from "framer-motion";
 
-const TILT = { stiffness: 170, damping: 18, mass: 0.7 };
-const SHIFT = { stiffness: 150, damping: 20 };
+const TILT = { stiffness: 170, damping: 22, mass: 0.7 };
+const SHIFT = { stiffness: 150, damping: 24 };
 const FLOAT = { duration: 3, repeat: Infinity, ease: "easeInOut" };
 
 export default function PhotoTilt({ src, alt = "Portrait" }) {
   const ref = useRef(null);
   const reduce = useReducedMotion();
+  const [hasFinePointer, setHasFinePointer] = useState(() =>
+    window.matchMedia("(min-width: 768px) and (hover: hover) and (pointer: fine)")
+      .matches,
+  );
+  const animateEffects = hasFinePointer && !reduce;
+
+  useEffect(() => {
+    const media = window.matchMedia(
+      "(min-width: 768px) and (hover: hover) and (pointer: fine)",
+    );
+    const updatePointer = (event) => setHasFinePointer(event.matches);
+    media.addEventListener("change", updatePointer);
+    return () => media.removeEventListener("change", updatePointer);
+  }, []);
 
   const mouseX = useMotionValue(0.5);
   const mouseY = useMotionValue(0.5);
 
   // main 3D rotation
-  const rotateX = useSpring(useTransform(mouseY, [0, 1], [14, -14]), TILT);
-  const rotateY = useSpring(useTransform(mouseX, [0, 1], [-14, 14]), TILT);
+  const rotateX = useSpring(useTransform(mouseY, [0, 1], [8, -8]), TILT);
+  const rotateY = useSpring(useTransform(mouseX, [0, 1], [-8, 8]), TILT);
 
   // parallax layers
-  const imageX = useSpring(useTransform(mouseX, [0, 1], [-12, 12]), SHIFT);
-  const imageY = useSpring(useTransform(mouseY, [0, 1], [-12, 12]), SHIFT);
-  const innerX = useSpring(useTransform(mouseX, [0, 1], [-6, 6]), SHIFT);
-  const innerY = useSpring(useTransform(mouseY, [0, 1], [-6, 6]), SHIFT);
+  const imageX = useSpring(useTransform(mouseX, [0, 1], [-7, 7]), SHIFT);
+  const imageY = useSpring(useTransform(mouseY, [0, 1], [-7, 7]), SHIFT);
+  const innerX = useSpring(useTransform(mouseX, [0, 1], [-3, 3]), SHIFT);
+  const innerY = useSpring(useTransform(mouseY, [0, 1], [-3, 3]), SHIFT);
 
   // cursor light (champagne + violet)
   const lightX = useTransform(mouseX, (v) => `${v * 100}%`);
@@ -60,14 +74,18 @@ export default function PhotoTilt({ src, alt = "Portrait" }) {
     >
       {/* ambient back glow */}
       <Motion.div
-        animate={{ scale: [1, 1.12, 1], opacity: [0.25, 0.42, 0.25] }}
+        animate={
+          animateEffects
+            ? { scale: [1, 1.12, 1], opacity: [0.25, 0.42, 0.25] }
+            : undefined
+        }
         transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
         className="pointer-events-none absolute h-[65%] w-[65%] rounded-full bg-primary/25 blur-[110px]"
       />
 
       {/* orbit 1 (violet) */}
       <Motion.div
-        animate={reduce ? undefined : { rotate: 360 }}
+        animate={animateEffects ? { rotate: 360 } : undefined}
         transition={{ duration: 32, repeat: Infinity, ease: "linear" }}
         className="pointer-events-none absolute h-[112%] w-[112%] rounded-full border border-primary/20"
       >
@@ -76,7 +94,7 @@ export default function PhotoTilt({ src, alt = "Portrait" }) {
 
       {/* orbit 2 (dashed, gold) */}
       <Motion.div
-        animate={reduce ? undefined : { rotate: -360 }}
+        animate={animateEffects ? { rotate: -360 } : undefined}
         transition={{ duration: 45, repeat: Infinity, ease: "linear" }}
         className="pointer-events-none absolute h-[101%] w-[101%] rounded-full border border-dashed border-amber-300/25"
       >
@@ -89,27 +107,29 @@ export default function PhotoTilt({ src, alt = "Portrait" }) {
         onPointerMove={handleMove}
         onPointerLeave={reset}
         style={{
-          rotateX: reduce ? 0 : rotateX,
-          rotateY: reduce ? 0 : rotateY,
+          rotateX: animateEffects ? rotateX : 0,
+          rotateY: animateEffects ? rotateY : 0,
           transformStyle: "preserve-3d",
         }}
         className="group relative h-[84%] w-[84%] cursor-pointer"
       >
         {/* deep back plane */}
         <div
-          style={{ transform: "translateZ(-70px) rotateZ(-2deg)" }}
+          style={{
+            transform: `translateZ(${hasFinePointer ? -70 : -24}px) rotateZ(${hasFinePointer ? -2 : 0}deg)`,
+          }}
           className="absolute inset-[-18px] rounded-[2.4rem] border border-primary/10 bg-primary/[0.03] shadow-[0_45px_100px_rgba(0,0,0,.5)]"
         />
 
         {/* holographic edge */}
         <Motion.div
-          style={{ translateZ: -30, background: edgeLight }}
+          style={{ translateZ: hasFinePointer ? -30 : -10, background: edgeLight }}
           className="absolute inset-[-7px] rounded-[2.1rem] opacity-60 blur-[1px] transition-opacity duration-500 group-hover:opacity-100"
         />
 
         {/* glass back panel */}
         <div
-          style={{ transform: "translateZ(-10px)" }}
+          style={{ transform: `translateZ(${hasFinePointer ? -10 : -4}px)` }}
           className="absolute inset-[-2px] rounded-[2rem] border border-white/10 bg-black/20 backdrop-blur-sm"
         />
 
@@ -118,7 +138,7 @@ export default function PhotoTilt({ src, alt = "Portrait" }) {
           style={{
             x: imageX,
             y: imageY,
-            translateZ: 35,
+            translateZ: hasFinePointer ? 35 : 12,
             transformStyle: "preserve-3d",
           }}
           className="relative h-full w-full overflow-hidden rounded-[1.8rem] bg-black shadow-[0_35px_90px_rgba(0,0,0,.55)] ring-1 ring-white/10"
@@ -127,7 +147,7 @@ export default function PhotoTilt({ src, alt = "Portrait" }) {
             src={src}
             alt={alt}
             draggable="false"
-            className="h-full w-full select-none object-cover grayscale transition-all duration-700 ease-out group-hover:scale-[1.055] group-hover:grayscale-0"
+            className="h-full w-full select-none object-cover grayscale transition-all duration-700 ease-out md:group-hover:scale-[1.04] md:group-hover:grayscale-0"
             onError={(e) => {
               e.currentTarget.style.display = "none";
               if (e.currentTarget.parentElement) {
@@ -146,7 +166,7 @@ export default function PhotoTilt({ src, alt = "Portrait" }) {
           />
 
           {/* hologram scan */}
-          {!reduce && (
+          {animateEffects && (
             <Motion.div
               animate={{ y: ["-120%", "120%"] }}
               transition={{
@@ -160,7 +180,7 @@ export default function PhotoTilt({ src, alt = "Portrait" }) {
           )}
 
           {/* glass shine */}
-          {!reduce && (
+          {animateEffects && (
             <Motion.div
               animate={{ x: ["-150%", "150%"] }}
               transition={{
@@ -181,7 +201,7 @@ export default function PhotoTilt({ src, alt = "Portrait" }) {
 
           {/* caption */}
           <Motion.div
-            style={{ x: innerX, y: innerY, translateZ: 80 }}
+            style={{ x: innerX, y: innerY, translateZ: hasFinePointer ? 80 : 24 }}
             className="absolute bottom-6 left-6"
           >
             <p className="font-mono text-[8px] uppercase tracking-[0.3em] text-white/60">
@@ -195,11 +215,11 @@ export default function PhotoTilt({ src, alt = "Portrait" }) {
 
         {/* floating status */}
         <Motion.div
-          style={{ x: innerX, y: innerY, translateZ: 130 }}
+          style={{ x: innerX, y: innerY, translateZ: hasFinePointer ? 130 : 32 }}
           className="absolute -right-2 top-[9%] sm:-right-5"
         >
           <Motion.div
-            animate={reduce ? undefined : { y: [0, -8, 0] }}
+            animate={animateEffects ? { y: [0, -8, 0] } : undefined}
             transition={FLOAT}
             className="rounded-full border border-emerald-400/30 bg-black/60 px-3 py-1.5 font-mono text-[9px] font-semibold uppercase tracking-[0.16em] text-emerald-300 shadow-[0_15px_35px_rgba(16,185,129,.2)] backdrop-blur-xl"
           >
@@ -210,11 +230,11 @@ export default function PhotoTilt({ src, alt = "Portrait" }) {
 
         {/* floating location */}
         <Motion.div
-          style={{ x: innerX, y: innerY, translateZ: 105 }}
+          style={{ x: innerX, y: innerY, translateZ: hasFinePointer ? 105 : 22 }}
           className="absolute -bottom-4 -left-2 sm:-left-5"
         >
           <Motion.div
-            animate={reduce ? undefined : { y: [0, 7, 0] }}
+            animate={animateEffects ? { y: [0, 7, 0] } : undefined}
             transition={{ ...FLOAT, duration: 3.7 }}
             className="rounded-full border border-amber-300/30 bg-black/60 px-3 py-1.5 font-mono text-[9px] font-semibold uppercase tracking-[0.16em] text-amber-200 shadow-[0_15px_35px_rgba(252,211,77,.18)] backdrop-blur-xl"
           >
@@ -224,16 +244,18 @@ export default function PhotoTilt({ src, alt = "Portrait" }) {
 
         {/* light nodes */}
         <Motion.div
-          style={{ translateZ: 150 }}
+          style={{ translateZ: hasFinePointer ? 150 : 30 }}
           animate={
-            reduce ? undefined : { scale: [1, 1.4, 1], opacity: [0.5, 1, 0.5] }
+            animateEffects
+              ? { scale: [1, 1.4, 1], opacity: [0.5, 1, 0.5] }
+              : undefined
           }
           transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
           className="absolute -left-3 top-[35%] h-2.5 w-2.5 rounded-full bg-primary shadow-[0_0_25px_hsl(262_83%_58%)]"
         />
         <Motion.div
-          style={{ translateZ: 120 }}
-          animate={reduce ? undefined : { y: [0, -10, 0], x: [0, 4, 0] }}
+          style={{ translateZ: hasFinePointer ? 120 : 24 }}
+          animate={animateEffects ? { y: [0, -10, 0], x: [0, 4, 0] } : undefined}
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
           className="absolute -right-2 bottom-[30%] h-1.5 w-1.5 rounded-full bg-amber-300 shadow-[0_0_18px_rgba(252,211,77,.9)]"
         />

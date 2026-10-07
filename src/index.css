@@ -54,6 +54,7 @@
     html {
         scroll-behavior: smooth;
         -webkit-tap-highlight-color: transparent;
+        overflow-x: clip;
         transition: background-color 450ms ease, color 450ms ease;
     }
 
@@ -62,7 +63,7 @@
         color: var(--color-foreground);
         font-family: var(--font-sans);
         -webkit-font-smoothing: antialiased;
-        overflow-x: hidden;
+        overflow-x: clip;
         font-feature-settings: "rlig" 1, "calt" 1;
         transition: background-color 450ms ease, color 450ms ease;
     }
