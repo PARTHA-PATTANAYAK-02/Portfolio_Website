@@ -11,6 +11,9 @@ import {
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { useTheme } from "../providers/ThemeContext";
+import { PROJECTS } from "../../data/projects";
+import { JOURNEY } from "../../data/journey";
+import { ACHIEVEMENT, CERTIFICATES } from "../../data/certificates";
 
 /* ================= Config ================= */
 const W = 170;
@@ -155,7 +158,268 @@ const MILESTONES = [
   { ms: 2 * 60 * 60 * 1000, msg: "2 hrs! Break time ☕" },
 ];
 
+const PORTFOLIO_FACTS = [
+  { section: "home", text: "Partha Pattanayak is a Full Stack Developer, MERN Stack Developer, Java Developer, and problem solver based in Kolkata, India. He is open to work." },
+  { section: "home", text: "Portfolio statistics: 10+ projects, 15+ technologies, 500+ DSA problems solved, and 4+ years coding." },
+  { section: "about", text: "Education and graduation: Partha completed a B.Tech in Information Technology from College of Engineering & Management, Kolaghat, in 2025 (2021–2025)." },
+  { section: "about", text: "Languages: English, Hindi, and Bengali. Location: Kolkata, India. Status: Open to work." },
+  { section: "about", text: "Current focus: full-stack apps with MERN and Java, DSA and backend development, and Generative AI integration." },
+  { section: "about", text: "Experience: Partha completed a 100-hour Data Analysis internship at DST InfoSolutions Pvt. Ltd. and participated in the GHCI 2025 hackathon." },
+  { section: "about", text: "Interests: gaming, music, cricket, and travel." },
+  { section: "skills", text: "Tech stack — frontend skills: HTML, CSS, JavaScript, React.js, Tailwind CSS, Bootstrap, React Router, and Vite." },
+  { section: "skills", text: "Tech stack — backend and database skills: Node.js, Express.js, REST APIs, MongoDB, and MySQL." },
+  { section: "skills", text: "Programming languages and CS fundamentals: JavaScript, Java, Python, C, DSA, OOP, and DBMS." },
+  { section: "skills", text: "Developer tools: Git, GitHub, VS Code, Postman, and npm. Currently learning Java and DSA, Generative AI, and backend architecture." },
+  { section: "contact", text: "Contact Partha by email at pattanayakp2002@gmail.com. He is available for opportunities and project discussions." },
+];
+
+const HELPER_QUESTIONS = [
+  { label: "Who is Partha?", question: "Who is Partha?" },
+  { label: "Skills & tech stack", question: "What skills does Partha have?" },
+  { label: "Projects", question: "What projects has Partha built?" },
+  { label: "Education", question: "Where did Partha graduate?" },
+  { label: "Experience", question: "What experience does Partha have?" },
+  { label: "Certifications", question: "What certificates does Partha have?" },
+  { label: "Currently learning", question: "What is Partha currently learning?" },
+  { label: "Contact", question: "What is Partha's email?" },
+];
+
+function renderHelperAnswer(text) {
+  return text.split(/(https?:\/\/[^\s]+)/g).map((part, index) => {
+    if (!/^https?:\/\//.test(part)) return part;
+    const url = part.replace(/[.,;!?]+$/, "");
+    const trailing = part.slice(url.length);
+    return (
+      <span key={`${index}-${part}`}>
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: "#8b5cf6", textDecoration: "underline" }}
+        >
+          {url}
+        </a>
+        {trailing}
+      </span>
+    );
+  });
+}
+
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
+
+function answerPortfolioQuestion(question) {
+  const query = question.toLowerCase();
+  const factAnswer = (section, predicate = () => true) => {
+    const match = PORTFOLIO_FACTS.find(
+      (fact) => fact.section === section && predicate(fact.text.toLowerCase()),
+    );
+    return match?.text || null;
+  };
+
+  if (/\b(who are you|what are you|your name)\b/.test(query))
+    return "I'm Partha's portfolio cat and helper! I can tell you about his skills, projects, education, experience, certifications, and contact details.";
+  if (/\b(who is partha|about partha|tell me about partha)\b/.test(query))
+    return factAnswer("home", (text) => text.includes("partha pattanayak"));
+  if (/\b(learn|learning|currently working|current focus)\b/.test(query))
+    return factAnswer("skills", (text) => text.includes("currently learning"));
+
+  const asksEducation =
+    /\b(education|educated|study|studied|studying|school|college|degree|graduate|graduated)\b|porashona|college|graduate/.test(
+      query,
+    );
+  if (asksEducation)
+    return factAnswer("about", (text) => text.includes("education and graduation"));
+  if (
+    /\b(where|location|located|city|based|live|lives|hometown)\b|kothay|thake|thako/.test(
+      query,
+    )
+  )
+    return factAnswer("about", (text) => text.includes("location:"));
+  if (/\b(email|contact|reach|hire)\b/.test(query))
+    return factAnswer("contact");
+  if (/\b(experience|internship|intern|hackathon)\b/.test(query))
+    return factAnswer("about", (text) => text.includes("experience:"));
+  if (/\b(language|speak|languages)\b/.test(query))
+    return factAnswer("about", (text) => text.startsWith("languages:"));
+  if (/\b(hobby|hobbies|interest|interests|cricket|gaming|music|travel)\b/.test(query))
+    return factAnswer("about", (text) => text.startsWith("interests:"));
+  if (/\b(open to work|job|role|developer|what does partha do)\b/.test(query))
+    return factAnswer("home", (text) => text.includes("full stack developer"));
+  if (/\b(dsa|problems solved|coding years|statistics|stats)\b/.test(query))
+    return factAnswer("home", (text) => text.includes("portfolio statistics"));
+
+  const normalizeWord = (word) =>
+    word.endsWith("ies")
+      ? `${word.slice(0, -3)}y`
+      : word.length > 4 && word.endsWith("s")
+        ? word.slice(0, -1)
+        : word;
+  const ignored = new Set([
+    "about", "and", "are", "can", "did", "does", "do", "for", "from", "he",
+    "him", "his", "how", "i", "is", "it", "me", "my", "of", "on", "or",
+    "please", "tell", "that", "the", "this", "to", "was", "were", "what",
+    "where", "which", "who", "with", "you",
+    "ache", "bolo", "gulo", "ki", "koro", "sommondhe", "tar",
+  ]);
+  const synonyms = {
+    graduated: "graduation",
+    graduate: "graduation",
+    studying: "education",
+    studied: "education",
+    located: "location",
+    lives: "location",
+    worked: "experience",
+    work: "experience",
+    built: "project",
+    made: "project",
+    technologies: "technology",
+    porashona: "education",
+    kothay: "location",
+    thake: "location",
+    thako: "location",
+  };
+  const terms = [
+    ...new Set(
+      (question.toLowerCase().match(/[a-z0-9+#.]+/g) || [])
+        .map((word) => synonyms[word] || normalizeWord(word))
+        .filter((word) => word.length > 1 && !ignored.has(word)),
+    ),
+  ];
+  if (!terms.length) return null;
+  const namedProject = PROJECTS.find((project) => {
+      const titleWords = project.title
+        .toLowerCase()
+        .match(/[a-z0-9+#.]+/g)
+        .map(normalizeWord);
+      return titleWords.every((word) => terms.includes(word));
+  });
+  if (
+    namedProject &&
+    terms.some((term) => ["github", "live", "demo", "source", "repo"].includes(term))
+  ) {
+    return `${namedProject.title} GitHub: ${namedProject.githubUrl}. Live demo: ${namedProject.liveUrl}.`;
+  }
+  if (namedProject) {
+    return `${namedProject.title} (${namedProject.tagline}) — ${namedProject.shortDescription} Tech stack: ${namedProject.tech.join(", ")}. Key features: ${namedProject.features.slice(0, 4).join(", ")}.`;
+  }
+  if (terms.includes("project")) {
+    if (!namedProject) {
+      return `Partha's projects: ${PROJECTS.map(
+        (project) => `${project.title} (${project.category}) — ${project.shortDescription}`,
+      ).join(" ")}`;
+    }
+  }
+  if (terms.some((term) => ["certificate", "certification"].includes(term))) {
+    const namedCertificate = CERTIFICATES.find((certificate) =>
+      terms.some((term) =>
+        certificate.title
+          .toLowerCase()
+          .split(/\s+/)
+          .some((word) => normalizeWord(word) === term),
+      ),
+    );
+    if (!namedCertificate) {
+      return `Partha's certifications: ${CERTIFICATES.map(
+        (certificate) => `${certificate.title} (${certificate.issuer}, ${certificate.year})`,
+      ).join("; ")}. ${ACHIEVEMENT.title}.`;
+    }
+    return `${namedCertificate.title} — ${namedCertificate.description} Issued by ${namedCertificate.issuer} in ${namedCertificate.year}.${namedCertificate.verifyUrl ? ` Verify it here: ${namedCertificate.verifyUrl}` : ""}`;
+  }
+  if (terms.includes("journey") || terms.includes("timeline")) {
+    return `Partha's journey: ${JOURNEY.map(
+      (milestone) => `${milestone.year}: ${milestone.title}`,
+    ).join("; ")}.`;
+  }
+  if (
+    terms.some((term) =>
+      ["skill", "technology", "stack", "tech"].includes(term),
+    ) &&
+    !terms.some((term) =>
+      PORTFOLIO_FACTS.some(
+        (fact) =>
+          fact.section === "skills" &&
+          fact.text.toLowerCase().includes(term) &&
+          !["skill", "technology", "stack", "tech"].includes(term),
+      ),
+    )
+  ) {
+    return `Partha's skills: ${PORTFOLIO_FACTS.filter((fact) => fact.section === "skills")
+      .map((fact) => fact.text)
+      .join(" ")}`;
+  }
+
+  const records = [];
+  records.push(...PORTFOLIO_FACTS);
+  [...new Set(PORTFOLIO_FACTS.map((fact) => fact.section))].forEach((id) => {
+    const section = document.getElementById(id);
+    if (!section) return;
+    section.querySelectorAll("h1, h2, h3, h4, p, li, dt, dd").forEach((node) => {
+      const text = node.textContent?.replace(/\s+/g, " ").trim();
+      if (text && text.length > 12) records.push({ section: id, text });
+    });
+  });
+
+  PROJECTS.forEach((project) => {
+    records.push({
+      section: "projects",
+      text: `Project ${project.title} (${project.tagline}): ${project.shortDescription} ${project.fullDescription} Tech stack: ${project.tech.join(", ")}. Key features: ${project.features.join(", ")}. GitHub: ${project.githubUrl}. Live demo: ${project.liveUrl}.`,
+    });
+  });
+  JOURNEY.forEach((milestone) =>
+    records.push({
+      section: "journey",
+      text: `${milestone.year}: ${milestone.title}. ${milestone.description}`,
+    }),
+  );
+  CERTIFICATES.forEach((certificate) =>
+    records.push({
+      section: "certifications",
+      text: `Certificate / Certification: ${certificate.title}, ${certificate.issuer}, ${certificate.year}. ${certificate.description}${certificate.verifyUrl ? ` Verify: ${certificate.verifyUrl}.` : ""}`,
+    }),
+  );
+  records.push({
+    section: "certifications",
+    text: `${ACHIEVEMENT.title}, ${ACHIEVEMENT.issuer}`,
+  });
+
+  const ranked = records
+    .map((record) => {
+      const content = new Set(
+        (record.text.toLowerCase().match(/[a-z0-9+#.]+/g) || []).map(normalizeWord),
+      );
+      const matched = terms.filter((term) => content.has(term));
+      return {
+        ...record,
+        score: matched.length / terms.length + matched.length * 0.2,
+      };
+    })
+    .filter((record) => record.score > 0)
+    .sort((a, b) => b.score - a.score);
+  if (!ranked.length) return null;
+
+  const topScore = ranked[0].score;
+  const relevant = ranked
+    .filter((record) => record.score >= Math.max(0.35, topScore * 0.68))
+    .filter(
+      (record, index, all) =>
+        all.findIndex(
+          (candidate) =>
+            candidate.section === record.section &&
+            candidate.text === record.text,
+        ) === index,
+    )
+    .slice(0, 3);
+  const facts = relevant
+    .map((record) => record.text)
+    .join(" ");
+  const maxLength = 430;
+  const clippedFacts = facts.slice(0, maxLength);
+  const answerText =
+    facts.length > maxLength
+      ? `${clippedFacts.slice(0, clippedFacts.lastIndexOf(" "))}…`
+      : facts;
+  return answerText;
+}
 
 function ThemeToggle({ isDark, toggle }) {
   return (
@@ -1179,6 +1443,8 @@ export default function PetBuddy() {
   const [webglFail, setWebglFail] = useState(false);
   const [mood, setMood] = useState("idle");
   const [message, setMessage] = useState(null);
+  const [helperOpen, setHelperOpen] = useState(false);
+  const [helperMessages, setHelperMessages] = useState([]);
   const [fx, setFx] = useState([]);
   const [impact, setImpact] = useState(null);
   const [sleeping, setSleeping] = useState(false);
@@ -1243,8 +1509,18 @@ export default function PetBuddy() {
   const lookY = useMotionValue(0);
   const lx = useSpring(lookX, LOOK);
   const ly = useSpring(lookY, LOOK);
+  const helperX = useTransform(sx, (x) =>
+    Math.max(12, Math.min(window.innerWidth - 372, x + (W * sc.current) / 2 - 180)),
+  );
+  const helperY = useTransform(sy, (y) => {
+    const below = y + H * sc.current + 42;
+    return below + 420 < window.innerHeight
+      ? below
+      : Math.max(12, y - 440);
+  });
 
   const buddyRef = useRef(null);
+  const helperLogRef = useRef(null);
   const canvasRef = useRef(null);
   const catHitTest = useRef(null);
   const lastAct = useRef(Date.now());
@@ -1320,6 +1596,22 @@ export default function PetBuddy() {
     setMessage(m);
     msgT.current = setTimeout(() => setMessage(null), d);
   }, []);
+  const askPortfolio = (question) => {
+    const answer =
+      answerPortfolioQuestion(question) ||
+      "I couldn't find that in the portfolio. Try another question from the list below.";
+    setHelperMessages((messages) =>
+      [...messages, { from: "you", text: question }, { from: "cat", text: answer }].slice(-8),
+    );
+    lastAct.current = Date.now();
+    setSleeping(false);
+    feel("happy", 1000);
+  };
+
+  useEffect(() => {
+    if (helperOpen && helperLogRef.current)
+      helperLogRef.current.scrollTop = helperLogRef.current.scrollHeight;
+  }, [helperMessages, helperOpen]);
   const feel = useCallback((m, d = 1400) => {
     clearTimeout(moodT.current);
     setMood(m);
@@ -1751,6 +2043,11 @@ export default function PetBuddy() {
       }
     };
     const onKey = (e) => {
+      if (e.key === "Escape" && helperOpen) {
+        setHelperOpen(false);
+        return;
+      }
+      if (e.target?.closest?.("[data-pet-helper]")) return;
       if (flags.current.sleeping || flags.current.landing) return;
       lastAct.current = Date.now();
       keyBuf.current = (keyBuf.current + (e.key || "").toLowerCase()).slice(-8);
@@ -1869,6 +2166,7 @@ export default function PetBuddy() {
     dropTreat,
     randomTreat,
     dark,
+    helperOpen,
   ]);
 
   useEffect(() => {
@@ -2588,6 +2886,30 @@ export default function PetBuddy() {
           >
             <button
               type="button"
+              aria-label="Ask the cat about this portfolio"
+              aria-expanded={helperOpen}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={() => {
+                setHelperOpen((open) => !open);
+                wake();
+              }}
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: "50%",
+                border: `1px solid ${UIt.border}`,
+                background: UIt.bg,
+                color: UIt.text,
+                cursor: "pointer",
+                fontSize: 16,
+                lineHeight: 1,
+                boxShadow: "0 4px 12px rgba(0,0,0,.22)",
+              }}
+            >
+              💬
+            </button>
+            <button
+              type="button"
               aria-label="Give a treat"
               onPointerDown={(e) => e.stopPropagation()}
               onClick={randomTreat}
@@ -2635,13 +2957,15 @@ export default function PetBuddy() {
                     borderRadius: 18,
                     fontSize: 13,
                     fontWeight: 700,
-                    whiteSpace: "nowrap",
+                    whiteSpace: "normal",
                     textAlign: "center",
                     background: UIt.bg,
                     color: UIt.text,
                     border: `1px solid ${UIt.border}`,
                     boxShadow: "0 10px 28px rgba(0,0,0,.28)",
-                    maxWidth: 240,
+                    maxWidth: "min(300px, calc(100vw - 28px))",
+                    lineHeight: 1.4,
+                    overflowWrap: "anywhere",
                   }}
                 >
                   {message}
@@ -2665,6 +2989,155 @@ export default function PetBuddy() {
           </div>
         </div>
       </Motion.div>
+      <AnimatePresence>
+        {helperOpen && (
+          <Motion.div
+            data-pet-helper
+            role="dialog"
+            aria-label="Portfolio helper"
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.96 }}
+            transition={{ type: "spring", stiffness: 420, damping: 30 }}
+            onPointerDown={(e) => e.stopPropagation()}
+            style={{
+              position: "absolute",
+              left: 0,
+              top: 0,
+              x: helperX,
+              y: helperY,
+              width: "min(360px, calc(100vw - 24px))",
+              maxHeight: "min(440px, calc(100vh - 24px))",
+              display: "flex",
+              flexDirection: "column",
+              gap: 10,
+              padding: 12,
+              borderRadius: 18,
+              background: UIt.bg,
+              color: UIt.text,
+              border: `1px solid ${UIt.border}`,
+              boxShadow: "0 12px 36px rgba(0,0,0,.3)",
+              pointerEvents: "auto",
+              zIndex: 10001,
+              transformOrigin: "bottom center",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 8,
+              }}
+            >
+              <div>
+                <strong style={{ fontSize: 14 }}>Portfolio helper 🐾</strong>
+                <div style={{ fontSize: 11, opacity: 0.72, marginTop: 2 }}>
+                  Quick answers from the full portfolio
+                </div>
+              </div>
+              <button
+                type="button"
+                aria-label="Close portfolio helper"
+                onClick={() => setHelperOpen(false)}
+                style={{
+                  border: 0,
+                  background: "transparent",
+                  color: "inherit",
+                  fontSize: 20,
+                  cursor: "pointer",
+                  padding: "0 4px",
+                }}
+              >
+                ×
+              </button>
+            </div>
+            <div
+              ref={helperLogRef}
+              role="log"
+              aria-live="polite"
+              style={{
+                minHeight: 100,
+                maxHeight: 205,
+                overflowY: "auto",
+                display: "flex",
+                flexDirection: "column",
+                gap: 9,
+                padding: 10,
+                border: `1px solid ${UIt.border}`,
+                borderRadius: 13,
+                background: "rgba(127,127,127,.07)",
+                fontSize: 13,
+                lineHeight: 1.5,
+              }}
+            >
+              {helperMessages.length === 0 ? (
+                <p style={{ margin: 0, opacity: 0.78, alignSelf: "center" }}>
+                  Pick any question to explore the whole portfolio.
+                </p>
+              ) : (
+                helperMessages.map((entry, index) => (
+                  <div
+                    key={`${index}-${entry.from}`}
+                    style={{ display: "flex", flexDirection: "column", gap: 4 }}
+                  >
+                    <span style={{ fontSize: 11, fontWeight: 700, opacity: 0.65 }}>
+                      {entry.from === "you" ? "YOU ASKED" : "PARTHA'S CAT"}
+                    </span>
+                    <div
+                      style={{
+                        padding: "9px 11px",
+                        borderRadius: 11,
+                        background:
+                          entry.from === "you"
+                            ? "rgba(124,58,237,.16)"
+                            : "rgba(127,127,127,.12)",
+                        overflowWrap: "anywhere",
+                      }}
+                    >
+                      {renderHelperAnswer(entry.text)}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                gap: 7,
+                overflowY: "auto",
+              }}
+            >
+              {HELPER_QUESTIONS.map(({ label, question }) => (
+                <Motion.button
+                  key={question}
+                  type="button"
+                  data-pet-helper
+                  onClick={() => askPortfolio(question)}
+                  whileHover={{ backgroundColor: "rgba(124,58,237,.16)" }}
+                  style={{
+                    minHeight: 36,
+                    padding: "7px 9px",
+                    borderRadius: 10,
+                    border: `1px solid ${UIt.border}`,
+                    background: "rgba(127,127,127,.08)",
+                    color: "inherit",
+                    textAlign: "left",
+                    fontSize: 11,
+                    fontWeight: 650,
+                    lineHeight: 1.25,
+                    cursor: "pointer",
+                    transition: "background .2s, border-color .2s",
+                  }}
+                >
+                  {label}
+                </Motion.button>
+              ))}
+            </div>
+          </Motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

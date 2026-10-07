@@ -11,7 +11,12 @@ const MOBILE_ITEMS = [
   { label: "Contact", id: "contact", icon: Mail },
 ];
 
-const SPRING = { type: "spring", stiffness: 420, damping: 34 };
+const SPRING = {
+  type: "spring",
+  stiffness: 420,
+  damping: 34,
+};
+
 const EASE = [0.16, 1, 0.3, 1];
 
 export default function MobileBottomNav() {
@@ -22,26 +27,39 @@ export default function MobileBottomNav() {
 
   useEffect(() => {
     const observers = [];
+
     MOBILE_ITEMS.forEach(({ id }) => {
       const el = document.getElementById(id);
       if (!el) return;
-      const obs = new IntersectionObserver(
-        ([entry]) => entry.isIntersecting && setActive(id),
+
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) setActive(id);
+        },
         { rootMargin: "-45% 0px -50% 0px", threshold: 0 },
       );
-      obs.observe(el);
-      observers.push(obs);
+
+      observer.observe(el);
+      observers.push(observer);
     });
-    return () => observers.forEach((o) => o.disconnect());
+
+    return () => observers.forEach((observer) => observer.disconnect());
   }, []);
 
   const scrollTo = (id) => {
     const el = document.getElementById(id);
     if (!el) return;
+
     setActive(id);
-    if (navigator.vibrate) navigator.vibrate(8);
+
+    if (navigator.vibrate && !reduce) navigator.vibrate(8);
+
     const y = el.getBoundingClientRect().top + window.scrollY - 90;
-    window.scrollTo({ top: y, behavior: "smooth" });
+
+    window.scrollTo({
+      top: y,
+      behavior: "smooth",
+    });
   };
 
   return (
@@ -55,39 +73,41 @@ export default function MobileBottomNav() {
       className="fixed inset-x-3 z-50 lg:hidden"
       aria-label="Mobile navigation"
     >
-      {/* glow border */}
-      <div className="relative rounded-full p-px">
+      <div className="relative mx-auto max-w-[520px] rounded-full p-px">
+        {/* Purple animated border. Only this layer rotates. */}
         <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-full">
           <Motion.div
             aria-hidden="true"
-            className="absolute left-1/2 top-1/2 aspect-square w-[150%]"
-            style={{
-              x: "-50%",
-              y: "-50%",
-              background:
-                "conic-gradient(from 0deg, transparent 0 55%, rgba(232,200,135,0.95) 74%, rgba(139,92,246,0.95) 88%, transparent 100%)",
-            }}
+            className="absolute left-1/2 top-1/2 aspect-square w-[150%] -translate-x-1/2 -translate-y-1/2 bg-[conic-gradient(from_0deg,transparent_0_55%,rgba(139,92,246,.9)_72%,rgba(217,70,239,.75)_88%,rgba(59,130,246,.65)_96%,transparent_100%)]"
             animate={reduce ? undefined : { rotate: 360 }}
-            transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+            transition={{
+              duration: 10,
+              repeat: Infinity,
+              ease: "linear",
+            }}
           />
+
           <div
-            className={`absolute inset-0 ${
-              isDark ? "bg-white/10" : "bg-black/[0.07]"
-            }`}
+            className={[
+              "absolute inset-0 rounded-full",
+              isDark ? "bg-white/10" : "bg-black/[0.06]",
+            ].join(" ")}
           />
         </div>
 
-        {/* main bar */}
+        {/* Same compact pill structure as the earlier version */}
         <div
-          className={`relative flex items-center justify-around gap-1 overflow-hidden rounded-full px-2 py-2 backdrop-blur-2xl ${
+          className={[
+            "relative flex items-center justify-around gap-1 overflow-hidden rounded-full px-2 py-2 backdrop-blur-2xl",
             isDark
-              ? "bg-slate-950/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
-              : "bg-white/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.95)]"
-          }`}
+              ? "bg-slate-950/85 shadow-[inset_0_1px_0_rgba(255,255,255,.08),0_18px_50px_-25px_rgba(0,0,0,.9)]"
+              : "bg-white/85 shadow-[inset_0_1px_0_rgba(255,255,255,.95),0_18px_50px_-25px_rgba(76,29,149,.3)]",
+          ].join(" ")}
         >
           {MOBILE_ITEMS.map((item) => {
-            const isActive = active === item.id;
             const Icon = item.icon;
+            const isActive = active === item.id;
+
             return (
               <Motion.button
                 key={item.id}
@@ -98,17 +118,25 @@ export default function MobileBottomNav() {
                 transition={SPRING}
                 aria-label={item.label}
                 aria-current={isActive ? "page" : undefined}
-                className={`relative flex items-center justify-center gap-1.5 rounded-full py-2.5 text-xs font-medium ${
-                  isActive ? "px-4" : "px-3"
-                }`}
+                className={[
+                  "relative flex items-center justify-center gap-1.5 rounded-full py-2.5 text-xs font-medium",
+                  isActive ? "px-4" : "px-3",
+                ].join(" ")}
               >
                 {isActive && (
                   <Motion.span
                     layoutId="mobile-active-pill"
                     transition={SPRING}
-                    className="absolute inset-0 rounded-full border border-amber-200/30 bg-gradient-to-r from-primary/20 via-primary/10 to-fuchsia-500/20 shadow-[0_0_24px_-6px_rgba(139,92,246,0.9)]"
+                    className={[
+                      "absolute inset-0 rounded-full border",
+                      isDark
+                        ? "border-primary/35 bg-gradient-to-r from-primary/25 via-primary/10 to-fuchsia-500/20"
+                        : "border-primary/25 bg-gradient-to-r from-primary/15 via-primary/5 to-fuchsia-500/10",
+                      "shadow-[0_0_24px_-6px_rgba(139,92,246,.85),inset_0_1px_0_rgba(255,255,255,.12)]",
+                    ].join(" ")}
                   />
                 )}
+
                 <Motion.span
                   className="relative z-10"
                   animate={
@@ -116,24 +144,29 @@ export default function MobileBottomNav() {
                       ? { scale: 1.1, rotate: [0, -8, 8, 0] }
                       : { scale: 1, rotate: 0 }
                   }
-                  transition={{ duration: 0.35, ease: EASE }}
+                  transition={{
+                    duration: 0.35,
+                    ease: EASE,
+                  }}
                 >
                   <Icon
-                    className={`h-5 w-5 transition-colors duration-300 ${
+                    className={[
+                      "h-5 w-5 transition-colors duration-300",
                       isActive
-                        ? "text-primary drop-shadow-[0_0_6px_rgba(139,92,246,0.8)]"
-                        : "text-muted-foreground"
-                    }`}
+                        ? "text-primary drop-shadow-[0_0_6px_rgba(139,92,246,.8)]"
+                        : "text-muted-foreground",
+                    ].join(" ")}
                     strokeWidth={isActive ? 2.4 : 2}
                   />
                 </Motion.span>
+
                 {isActive && (
                   <Motion.span
                     layout
                     initial={{ opacity: 0, width: 0 }}
                     animate={{ opacity: 1, width: "auto" }}
                     transition={SPRING}
-                    className="relative z-10 overflow-hidden whitespace-nowrap bg-gradient-to-r from-amber-400 via-primary to-fuchsia-400 bg-clip-text text-[11px] font-semibold text-transparent"
+                    className="relative z-10 overflow-hidden whitespace-nowrap bg-gradient-to-r from-primary via-violet-500 to-fuchsia-500 bg-clip-text text-[11px] font-semibold text-transparent"
                   >
                     {item.label}
                   </Motion.span>
