@@ -9,7 +9,6 @@ import {
 import {
   ArrowUpRight,
   Award,
-  Boxes,
   BriefcaseBusiness,
   Code2,
   Grid2X2,
@@ -40,14 +39,16 @@ export default function Navbar() {
   const reduce = useReducedMotion();
   const isDark = theme === "dark";
   const [isMobile, setIsMobile] = useState(() =>
-    window.matchMedia("(max-width: 900px)").matches,
+    typeof window !== "undefined"
+      ? window.matchMedia("(max-width: 900px)").matches
+      : false,
   );
   const [scrolled, setScrolled] = useState(false);
   const [active, setActive] = useActiveSection(NAV_ACTIVE_IDS);
-  const [hovered, setHovered] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const rootRef = useRef(null);
+  const rootRectRef = useRef(null);
   const cursorX = useMotionValue(0.5);
   const cursorY = useMotionValue(0.5);
   const smoothX = useSpring(cursorX, { stiffness: 180, damping: 24 });
@@ -82,12 +83,26 @@ export default function Navbar() {
   const openPalette = () =>
     window.dispatchEvent(new CustomEvent("open-command-palette"));
 
+  const onPointerEnter = (event) => {
+    if (reduce || event.pointerType !== "mouse") return;
+    rootRectRef.current = rootRef.current?.getBoundingClientRect();
+  };
+
   const onPointerMove = (event) => {
     if (reduce || event.pointerType !== "mouse") return;
-    const rect = rootRef.current?.getBoundingClientRect();
+    if (!rootRectRef.current) {
+      rootRectRef.current = rootRef.current?.getBoundingClientRect();
+    }
+    const rect = rootRectRef.current;
     if (!rect) return;
     cursorX.set((event.clientX - rect.left) / rect.width);
     cursorY.set((event.clientY - rect.top) / rect.height);
+  };
+
+  const onPointerLeave = () => {
+    cursorX.set(0.5);
+    cursorY.set(0.5);
+    rootRectRef.current = null;
   };
 
   return (
@@ -96,11 +111,9 @@ export default function Navbar() {
       <header
         className="partha-nav-shell"
         ref={rootRef}
+        onPointerEnter={onPointerEnter}
         onPointerMove={onPointerMove}
-        onPointerLeave={() => {
-          cursorX.set(0.5);
-          cursorY.set(0.5);
-        }}
+        onPointerLeave={onPointerLeave}
       >
         <div
           className={`partha-nav ${isDark ? "is-dark" : "is-light"} ${scrolled ? "is-scrolled" : ""}`}
@@ -125,11 +138,8 @@ export default function Navbar() {
                   key={item.id}
                   item={item}
                   active={active === item.id}
-                  hovered={hovered === item.id}
-                  onHover={() => setHovered(item.id)}
-                  onLeave={() => setHovered(null)}
                   onClick={() => scrollTo(item.id)}
-                  reduce={reduce}
+                  reduce={reduce || isMobile}
                 />
               ))}
             </nav>
@@ -137,7 +147,7 @@ export default function Navbar() {
             <div className="nav-actions">
               <MagneticButton
                 onClick={openPalette}
-                reduce={reduce}
+                reduce={reduce || isMobile}
                 className="search-btn"
                 ariaLabel="Open command palette"
               >
@@ -147,7 +157,7 @@ export default function Navbar() {
               </MagneticButton>
               <MagneticButton
                 onClick={() => scrollTo("contact")}
-                reduce={reduce}
+                reduce={reduce || isMobile}
                 className="talk-btn"
                 ariaLabel="Contact me"
               >
@@ -158,6 +168,7 @@ export default function Navbar() {
             </div>
 
             <button
+              type="button"
               className="mobile-trigger"
               onClick={() => setMobileOpen((v) => !v)}
               aria-label="Toggle navigation"
@@ -181,6 +192,7 @@ export default function Navbar() {
               return (
                 <button
                   key={item.id}
+                  type="button"
                   className={
                     active === item.id ? "mobile-link active" : "mobile-link"
                   }
@@ -200,14 +212,24 @@ export default function Navbar() {
 
 function Brand3D({ onClick, reduce }) {
   const ref = useRef(null);
+  const rectRef = useRef(null);
   const rx = useSpring(0, { stiffness: 210, damping: 20 });
   const ry = useSpring(0, { stiffness: 210, damping: 20 });
   const x = useSpring(0, { stiffness: 230, damping: 22 });
   const y = useSpring(0, { stiffness: 230, damping: 22 });
 
+  const onPointerEnter = (event) => {
+    if (reduce || event.pointerType !== "mouse") return;
+    rectRef.current = ref.current?.getBoundingClientRect();
+  };
+
   const move = (event) => {
-    if (reduce) return;
-    const r = ref.current.getBoundingClientRect();
+    if (reduce || event.pointerType !== "mouse") return;
+    if (!rectRef.current) {
+      rectRef.current = ref.current?.getBoundingClientRect();
+    }
+    const r = rectRef.current;
+    if (!r) return;
     const px = (event.clientX - (r.left + r.width / 2)) / (r.width / 2);
     const py = (event.clientY - (r.top + r.height / 2)) / (r.height / 2);
     ry.set(px * 14);
@@ -221,13 +243,16 @@ function Brand3D({ onClick, reduce }) {
     ry.set(0);
     x.set(0);
     y.set(0);
+    rectRef.current = null;
   };
 
   return (
     <Motion.button
       ref={ref}
+      type="button"
       className="brand-3d"
       onClick={onClick}
+      onPointerEnter={onPointerEnter}
       onPointerMove={move}
       onPointerLeave={reset}
       whileTap={{ scale: 0.96 }}
@@ -260,25 +285,27 @@ function Brand3D({ onClick, reduce }) {
   );
 }
 
-function MagneticNavItem({
-  item,
-  active,
-  hovered,
-  onHover,
-  onLeave,
-  onClick,
-  reduce,
-}) {
+function MagneticNavItem({ item, active, onClick, reduce }) {
   const ref = useRef(null);
+  const rectRef = useRef(null);
   const mx = useSpring(0, { stiffness: 330, damping: 23, mass: 0.45 });
   const my = useSpring(0, { stiffness: 330, damping: 23, mass: 0.45 });
   const rx = useSpring(0, { stiffness: 280, damping: 22 });
   const ry = useSpring(0, { stiffness: 280, damping: 22 });
   const z = useSpring(0, { stiffness: 300, damping: 22 });
 
+  const onPointerEnter = (event) => {
+    if (reduce || event.pointerType !== "mouse") return;
+    rectRef.current = ref.current?.getBoundingClientRect();
+  };
+
   const move = (event) => {
-    if (reduce) return;
-    const r = ref.current.getBoundingClientRect();
+    if (reduce || event.pointerType !== "mouse") return;
+    if (!rectRef.current) {
+      rectRef.current = ref.current?.getBoundingClientRect();
+    }
+    const r = rectRef.current;
+    if (!r) return;
     const px = (event.clientX - (r.left + r.width / 2)) / r.width;
     const py = (event.clientY - (r.top + r.height / 2)) / r.height;
     mx.set(px * 10);
@@ -294,17 +321,18 @@ function MagneticNavItem({
     rx.set(0);
     ry.set(0);
     z.set(0);
-    onLeave();
+    rectRef.current = null;
   };
+
   const Icon = item.icon;
 
   return (
     <Motion.button
       ref={ref}
       type="button"
-      className={`nav-item ${active ? "active" : ""} ${hovered ? "hovered" : ""}`}
+      className={`nav-item ${active ? "active" : ""}`}
       onClick={onClick}
-      onPointerEnter={onHover}
+      onPointerEnter={onPointerEnter}
       onPointerMove={move}
       onPointerLeave={reset}
       style={{ x: mx, y: my, rotateX: rx, rotateY: ry, z }}
@@ -329,37 +357,45 @@ function MagneticButton({
 }) {
   const x = useSpring(0, { stiffness: 340, damping: 22 });
   const y = useSpring(0, { stiffness: 340, damping: 22 });
-  const rx = useSpring(0, { stiffness: 260, damping: 22 });
-  const ry = useSpring(0, { stiffness: 260, damping: 22 });
   const ref = useRef(null);
+  const rectRef = useRef(null);
+
+  const onPointerEnter = (event) => {
+    if (reduce || event.pointerType !== "mouse") return;
+    rectRef.current = ref.current?.getBoundingClientRect();
+  };
 
   const move = (event) => {
-    if (reduce) return;
-    const r = ref.current.getBoundingClientRect();
+    if (reduce || event.pointerType !== "mouse") return;
+    if (!rectRef.current) {
+      rectRef.current = ref.current?.getBoundingClientRect();
+    }
+    const r = rectRef.current;
+    if (!r) return;
     const px = (event.clientX - (r.left + r.width / 2)) / r.width;
     const py = (event.clientY - (r.top + r.height / 2)) / r.height;
     x.set(px * 8);
     y.set(py * 6);
-    ry.set(px * 8);
-    rx.set(-py * 7);
   };
+
   const reset = () => {
     x.set(0);
     y.set(0);
-    rx.set(0);
-    ry.set(0);
+    rectRef.current = null;
   };
 
   return (
     <Motion.button
       ref={ref}
+      type="button"
       className={`magnetic-btn ${className}`}
       onClick={onClick}
+      onPointerEnter={onPointerEnter}
       onPointerMove={move}
       onPointerLeave={reset}
-      style={{ x, y, rotateX: rx, rotateY: ry }}
-      aria-label={ariaLabel}
       whileTap={{ scale: 0.95 }}
+      style={{ x, y }}
+      aria-label={ariaLabel}
     >
       {children}
     </Motion.button>
@@ -367,31 +403,34 @@ function MagneticButton({
 }
 
 function ParticleField({ reduce }) {
+  if (reduce) return null;
   const particles = useMemo(
     () =>
       Array.from({ length: 18 }, (_, i) => ({
         id: i,
-        left: `${(i * 37) % 100}%`,
-        top: `${(i * 61) % 100}%`,
+        left: `${(i * 37 + 10) % 94}%`,
+        top: `${(i * 53 + 12) % 80}%`,
         size: 2 + (i % 3),
       })),
     [],
   );
+
   return (
     <div className="particle-field" aria-hidden="true">
       {particles.map((p, i) => (
         <Motion.i
           key={p.id}
-          style={{ left: p.left, top: p.top, width: p.size, height: p.size }}
-          animate={
-            reduce
-              ? undefined
-              : {
-                  y: [0, i % 2 ? -10 : 10, 0],
-                  x: [0, i % 3 ? 5 : -5, 0],
-                  opacity: [0.18, 0.65, 0.18],
-                }
-          }
+          style={{
+            left: p.left,
+            top: p.top,
+            width: p.size,
+            height: p.size,
+          }}
+          animate={{
+            y: [0, -10, 0],
+            x: [0, 4, 0],
+            opacity: [0.25, 0.9, 0.25],
+          }}
           transition={{
             duration: 3.5 + (i % 5),
             repeat: Infinity,
@@ -432,11 +471,19 @@ const styles = `
 .brand-name strong{font:700 15px "Space Grotesk","Inter",sans-serif;letter-spacing:-.03em;}
 .brand-name small{margin-top:5px;font:600 8px "Inter",sans-serif;letter-spacing:.16em;opacity:.52;}
 .nav-links{display:flex;align-items:center;justify-content:center;gap:5px;flex:1;min-width:0;transform-style:preserve-3d;}
-.nav-item{position:relative;height:46px;padding:0 13px;border:0;background:transparent;color:inherit;opacity:.68;border-radius:16px;display:flex;align-items:center;gap:8px;cursor:pointer;white-space:nowrap;transform-style:preserve-3d;perspective:800px;transition:opacity .25s ease;}
+.nav-item{position:relative;height:46px;padding:0 13px;border:0;background:transparent;color:inherit;opacity:.68;border-radius:16px;display:flex;align-items:center;gap:8px;cursor:pointer;white-space:nowrap;transform-style:preserve-3d;perspective:800px;transition:opacity .2s ease;user-select:none;}
 .nav-item:hover,.nav-item.hovered,.nav-item.active{opacity:1;}
-.nav-item-surface{position:absolute;inset:0;border-radius:16px;background:linear-gradient(145deg,rgba(255,255,255,.08),rgba(124,58,237,.03));border:1px solid transparent;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);transform:translateZ(-8px);transition:background .25s ease,border-color .25s ease,box-shadow .25s ease,transform .25s ease;}
-.nav-item:hover .nav-item-surface,.nav-item.hovered .nav-item-surface{background:linear-gradient(145deg,rgba(255,255,255,.13),rgba(124,58,237,.16));border-color:rgba(167,139,250,.3);box-shadow:0 15px 35px -20px rgba(124,58,237,.9),inset 0 1px 0 rgba(255,255,255,.13);transform:translateZ(-2px);}
-.nav-item.active .nav-item-surface{background:linear-gradient(145deg,rgba(139,92,246,.3),rgba(124,58,237,.1));border-color:rgba(167,139,250,.55);box-shadow:0 14px 36px -18px rgba(124,58,237,.9),inset 0 1px 0 rgba(255,255,255,.16);}
+
+/* GPU-accelerated surface crossfade to eliminate background transition lag */
+.nav-item-surface{position:absolute;inset:0;border-radius:16px;background:linear-gradient(145deg,rgba(255,255,255,.08),rgba(124,58,237,.03));border:1px solid transparent;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);transform:translateZ(-8px);transition:transform .2s ease;will-change:transform;}
+.nav-item-surface::before{content:"";position:absolute;inset:-1px;border-radius:16px;background:linear-gradient(145deg,rgba(255,255,255,.13),rgba(124,58,237,.16));border:1px solid rgba(167,139,250,.3);box-shadow:0 15px 35px -20px rgba(124,58,237,.9),inset 0 1px 0 rgba(255,255,255,.13);opacity:0;transition:opacity .2s ease;pointer-events:none;}
+.nav-item-surface::after{content:"";position:absolute;inset:-1px;border-radius:16px;background:linear-gradient(145deg,rgba(139,92,246,.3),rgba(124,58,237,.1));border:1px solid rgba(167,139,250,.55);box-shadow:0 14px 36px -18px rgba(124,58,237,.9),inset 0 1px 0 rgba(255,255,255,.16);opacity:0;transition:opacity .22s ease;pointer-events:none;}
+
+.nav-item:hover .nav-item-surface,.nav-item.hovered .nav-item-surface{transform:translateZ(-2px);}
+.nav-item:hover .nav-item-surface::before,.nav-item.hovered .nav-item-surface::before{opacity:1;}
+.nav-item.active .nav-item-surface{transform:translateZ(0);}
+.nav-item.active .nav-item-surface::after{opacity:1;}
+
 .nav-item-icon,.nav-item-label,.active-dot{position:relative;z-index:2;}
 .nav-item-icon{display:grid;place-items:center;color:hsl(262 83% 67%);filter:drop-shadow(0 0 6px rgba(139,92,246,.35));}
 .nav-item-label{font:600 12px "Inter",sans-serif;}

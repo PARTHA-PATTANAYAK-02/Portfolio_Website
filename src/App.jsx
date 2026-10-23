@@ -58,10 +58,13 @@ export default function App() {
   return (
     <div className="relative min-h-screen text-foreground">
       {/* DotField Background */}
-      <div className="fixed inset-0 z-0 pointer-events-none">
+      <div
+        className="fixed inset-0 z-0 pointer-events-none transform-gpu"
+        style={{ contain: "strict", willChange: "transform" }}
+      >
         <DotField
           dotRadius={1.5}
-          dotSpacing={22}
+          dotSpacing={26}
           bulgeStrength={80}
           glowRadius={180}
           sparkle={false}

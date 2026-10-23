@@ -314,6 +314,8 @@ const DotField = memo(
             inset: 0,
             width: "100%",
             height: "100%",
+            contain: "strict",
+            transform: "translateZ(0)",
           }}
         />
         <svg

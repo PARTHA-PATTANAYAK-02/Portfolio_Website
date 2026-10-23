@@ -4,7 +4,6 @@ import {
   animate,
   useInView,
   useMotionValue,
-  useMotionTemplate,
   useSpring,
   useTransform,
   useReducedMotion,
@@ -141,93 +140,54 @@ function CountUp({ to, suffix = "" }) {
   );
 }
 
-/* ---------------- 3D glow card: tilt + animated border + cursor light ----------------
-   Children can pop out of the card with  [transform:translateZ(30px)]  */
+/* ---------------- Smooth 3D tilt glass card ---------------- */
 function GlowCard({
   children,
-  intensity = 6,
   className = "",
   innerClassName = "p-5 sm:p-7",
   delay = 0,
 }) {
-  const ref = useRef(null);
+  const cardRef = useRef(null);
   const reduce = useReducedMotion();
-  const px = useMotionValue(0.5);
-  const py = useMotionValue(0.5);
-  const sx = useMotionValue(-400);
-  const sy = useMotionValue(-400);
-  const spring = { stiffness: 160, damping: 18, mass: 0.6 };
-  const rotateX = useSpring(
-    useTransform(py, [0, 1], [intensity, -intensity]),
-    spring,
-  );
-  const rotateY = useSpring(
-    useTransform(px, [0, 1], [-intensity, intensity]),
-    spring,
-  );
-  const spot = useMotionTemplate`radial-gradient(380px circle at ${sx}px ${sy}px, rgba(232,200,135,0.16), rgba(139,92,246,0.13) 45%, transparent 70%)`;
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+  const smoothX = useSpring(mouseX, { stiffness: 260, damping: 24, mass: 0.5 });
+  const smoothY = useSpring(mouseY, { stiffness: 260, damping: 24, mass: 0.5 });
+  const rotateX = useTransform(smoothY, [-0.5, 0.5], [5, -5]);
+  const rotateY = useTransform(smoothX, [-0.5, 0.5], [-5, 5]);
 
-  const onMove = (e) => {
-    if (e.pointerType !== "mouse" || !ref.current) return;
-    const r = ref.current.getBoundingClientRect();
-    const x = e.clientX - r.left;
-    const y = e.clientY - r.top;
-    sx.set(x);
-    sy.set(y);
-    px.set(x / r.width);
-    py.set(y / r.height);
+  const handlePointerMove = (e) => {
+    if (reduce || e.pointerType !== "mouse" || !cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    mouseX.set(x);
+    mouseY.set(y);
   };
-  const onLeave = () => {
-    px.set(0.5);
-    py.set(0.5);
-    sx.set(-400);
-    sy.set(-400);
+
+  const handlePointerLeave = () => {
+    mouseX.set(0);
+    mouseY.set(0);
   };
 
   return (
     <Motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: 36, rotateX: 12 }}
-      whileInView={{ opacity: 1, y: 0, rotateX: 0 }}
-      viewport={{ once: true, margin: "-50px" }}
-      transition={{ duration: 0.8, delay, ease: [0.22, 1, 0.36, 1] }}
-      onPointerMove={onMove}
-      onPointerLeave={onLeave}
+      ref={cardRef}
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-40px" }}
+      transition={{ duration: 0.5, delay, ease: [0.22, 1, 0.36, 1] }}
+      onPointerMove={handlePointerMove}
+      onPointerLeave={handlePointerLeave}
       style={{
         rotateX: reduce ? 0 : rotateX,
         rotateY: reduce ? 0 : rotateY,
-        transformPerspective: 1400,
-        transformStyle: "preserve-3d",
+        transformPerspective: 1000,
       }}
-      className={`group relative transform-gpu rounded-3xl shadow-xl shadow-slate-900/10 transition-shadow duration-500 hover:shadow-2xl hover:shadow-primary/20 dark:shadow-black/40 ${className}`}
+      className={`group relative rounded-3xl border border-border/70 bg-card/60 backdrop-blur-md shadow-lg shadow-black/5 dark:shadow-black/25 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/15 transition-colors duration-300 ${className}`}
     >
-      {/* animated champagne-violet border */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit] opacity-50 transition-opacity duration-500 group-hover:opacity-100">
-        <Motion.div
-          aria-hidden="true"
-          className="absolute left-1/2 top-1/2 aspect-square w-[150%]"
-          style={{
-            x: "-50%",
-            y: "-50%",
-            background:
-              "conic-gradient(from 0deg, transparent 0 55%, rgba(232,200,135,0.9) 74%, rgba(139,92,246,0.9) 88%, transparent 100%)",
-          }}
-        />
-        <div className="absolute inset-0 bg-slate-200/80 dark:bg-white/10" />
-      </div>
-
-      {/* glass body + cursor light */}
-      <div className="pointer-events-none absolute inset-px overflow-hidden rounded-[calc(1.5rem-1px)] bg-white/85 backdrop-blur-xl dark:bg-slate-950/80">
-        <Motion.div
-          aria-hidden="true"
-          className="absolute inset-0"
-          style={{ background: spot }}
-        />
-      </div>
-
-      <div
-        className={`relative h-full [transform-style:preserve-3d] ${innerClassName}`}
-      >
+      <div className="pointer-events-none absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      <div className={`relative h-full ${innerClassName}`}>
         {children}
       </div>
     </Motion.div>
@@ -316,14 +276,9 @@ export default function About() {
               {FOCUS.map((item) => {
                 const Icon = item.icon;
                 return (
-                  <Motion.div
+                  <div
                     key={item.text}
-                    whileHover={
-                      reduce ? undefined : { y: -8, rotateX: 14, scale: 1.04 }
-                    }
-                    style={{ transformPerspective: 700, translateZ: 30 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 18 }}
-                    className="flex items-start gap-2.5 rounded-xl border border-border/60 bg-background/50 p-3 shadow-sm hover:border-primary/50 hover:shadow-[0_18px_30px_-12px_rgba(139,92,246,0.5)]"
+                    className="flex items-start gap-2.5 rounded-xl border border-border/60 bg-background/50 p-3 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:bg-primary/5"
                   >
                     <span className="shrink-0 rounded-lg border border-primary/30 bg-primary/15 p-1.5">
                       <Icon className="h-3.5 w-3.5 text-primary" />
@@ -331,7 +286,7 @@ export default function About() {
                     <span className="text-xs leading-snug text-foreground/85">
                       {item.text}
                     </span>
-                  </Motion.div>
+                  </div>
                 );
               })}
             </div>
@@ -341,12 +296,9 @@ export default function About() {
               {FACTS.map((f) => {
                 const Icon = f.icon;
                 return (
-                  <Motion.div
+                  <div
                     key={f.label}
-                    whileHover={reduce ? undefined : { y: -6, rotateX: 10 }}
-                    style={{ transformPerspective: 700, translateZ: 24 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 18 }}
-                    className="flex items-center gap-3 rounded-xl border border-border/60 bg-background/50 p-3 hover:border-primary/50"
+                    className="flex items-center gap-3 rounded-xl border border-border/60 bg-background/50 p-3 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:bg-primary/5"
                   >
                     <span className="shrink-0 rounded-lg border border-primary/30 bg-primary/15 p-2">
                       <Icon className="h-3.5 w-3.5 text-primary" />
@@ -359,39 +311,33 @@ export default function About() {
                         {f.value}
                       </span>
                     </span>
-                  </Motion.div>
+                  </div>
                 );
               })}
             </div>
 
             {/* actions */}
             <div className="mt-7 flex flex-wrap items-center gap-2.5">
-              <Motion.button
+              <button
                 type="button"
                 onClick={() => scrollTo("contact")}
-                whileHover={{ y: -3, scale: 1.04 }}
-                whileTap={{ scale: 0.96 }}
-                style={{ translateZ: 40 }}
-                className="group relative inline-flex items-center gap-1.5 overflow-hidden rounded-xl border border-white/20 bg-gradient-to-br from-primary via-violet-600 to-fuchsia-500 px-5 py-2.5 text-xs font-semibold text-white shadow-[0_10px_28px_-8px_rgba(139,92,246,0.6),inset_0_1px_0_rgba(255,255,255,0.3)]"
+                className="group relative inline-flex items-center gap-1.5 overflow-hidden rounded-xl border border-white/20 bg-gradient-to-br from-primary via-violet-600 to-fuchsia-500 px-5 py-2.5 text-xs font-semibold text-white shadow-[0_10px_28px_-8px_rgba(139,92,246,0.6),inset_0_1px_0_rgba(255,255,255,0.3)] transition-transform duration-200 hover:-translate-y-0.5 active:scale-95"
               >
                 <span className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/45 to-transparent opacity-0 transition-all duration-700 group-hover:left-[130%] group-hover:opacity-100" />
                 <Mail className="relative h-3.5 w-3.5" />
                 <span className="relative">Hire Me</span>
                 <ArrowRight className="relative h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-              </Motion.button>
+              </button>
 
-              <Motion.a
+              <a
                 href="https://drive.google.com/drive/folders/1rawC4WT_wXNY7aiTJYWIVnhXPCbBSGD1?usp=sharing"
                 target="_blank"
                 rel="noopener noreferrer"
-                whileHover={{ y: -3, scale: 1.04 }}
-                whileTap={{ scale: 0.96 }}
-                style={{ translateZ: 40 }}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card/50 px-5 py-2.5 text-xs font-semibold backdrop-blur-md hover:border-primary/50"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card/50 px-5 py-2.5 text-xs font-semibold backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 active:scale-95"
               >
                 <ExternalLink className="h-3.5 w-3.5" />
                 View resume
-              </Motion.a>
+              </a>
 
               {[
                 {
@@ -405,19 +351,16 @@ export default function About() {
                   Icon: GithubIcon,
                 },
               ].map(({ href, label, Icon }) => (
-                <Motion.a
+                <a
                   key={label}
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={label}
-                  whileHover={{ y: -5, rotateX: 14, scale: 1.1 }}
-                  whileTap={{ scale: 0.94 }}
-                  style={{ transformPerspective: 600, translateZ: 40 }}
-                  className="group rounded-xl border border-border bg-card/50 p-2.5 backdrop-blur-md hover:border-primary/50 hover:shadow-[0_14px_26px_-8px_rgba(139,92,246,0.55)]"
+                  className="group rounded-xl border border-border bg-card/50 p-2.5 backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-[0_14px_26px_-8px_rgba(139,92,246,0.45)] active:scale-95"
                 >
                   <Icon className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
-                </Motion.a>
+                </a>
               ))}
             </div>
           </GlowCard>
@@ -428,11 +371,10 @@ export default function About() {
           {STATS.map((s, i) => (
             <GlowCard
               key={s.label}
-              intensity={12}
               delay={0.05 * i}
               innerClassName="p-3.5 text-center sm:p-4"
             >
-              <div className="[transform:translateZ(30px)]">
+              <div>
                 <div className="gradient-text font-display text-2xl font-bold tracking-tight sm:text-3xl">
                   <CountUp to={s.to} suffix={s.suffix} />
                 </div>

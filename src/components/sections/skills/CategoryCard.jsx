@@ -32,15 +32,11 @@ export default function CategoryCard({ title, icon, items, delay = 0 }) {
 
       {/* chips */}
       <div className="relative flex flex-wrap gap-1.5">
-        {items.map((item, i) => {
+        {items.map((item) => {
           const ChipIcon = item.icon;
           return (
-            <Motion.div
+            <div
               key={item.name}
-              initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: delay + 0.05 + i * 0.03 }}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/60 bg-background/40 hover:border-primary/50 hover:bg-primary/5 transition-all group/chip"
             >
               <ChipIcon
@@ -48,7 +44,7 @@ export default function CategoryCard({ title, icon, items, delay = 0 }) {
                 style={{ color: item.color }}
               />
               <span className="text-[11px] font-medium">{item.name}</span>
-            </Motion.div>
+            </div>
           );
         })}
       </div>

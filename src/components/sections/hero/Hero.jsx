@@ -43,11 +43,6 @@ const SOCIALS = [
     href: "https://www.geeksforgeeks.org/profile/parthapatta6brh",
     label: "GeeksForGeeks",
   },
-  {
-    icon: HackerRankIcon,
-    href: "https://www.hackerrank.com/profile/YOUR_HANDLE",
-    label: "HackerRank",
-  },
 ];
 
 export default function Hero({ onReady }) {

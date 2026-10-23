@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 export function useActiveSection(activeIds) {
-  const [active, setActive] = useState("home");
+  const [active, setActive] = useState(activeIds[0] ?? "home");
 
   useEffect(() => {
     let frame = null;
@@ -11,29 +11,57 @@ export function useActiveSection(activeIds) {
 
       frame = window.requestAnimationFrame(() => {
         frame = null;
-        const activationLine = window.innerHeight * 0.38;
-        let nextActive = activeIds[0] ?? "home";
+
+        const scrollY = window.scrollY;
+        const windowHeight = window.innerHeight;
+        const docHeight = document.documentElement.scrollHeight;
+
+        // At very top of page
+        if (scrollY < 120) {
+          setActive(activeIds[0] ?? "home");
+          return;
+        }
+
+        // At very bottom of page
+        if (scrollY + windowHeight >= docHeight - 80 && activeIds.length > 0) {
+          setActive(activeIds[activeIds.length - 1]);
+          return;
+        }
+
+        // Focal line is ~36% from the top of the viewport (just below header)
+        const focalLine = windowHeight * 0.36;
+        let currentId = null;
 
         for (const id of activeIds) {
           const section = document.getElementById(id);
-          if (
-            section &&
-            section.getBoundingClientRect().top <= activationLine
-          ) {
-            nextActive = id;
+          if (!section) continue;
+
+          const rect = section.getBoundingClientRect();
+          // Check if this section encloses the focal line
+          if (rect.top <= focalLine && rect.bottom >= focalLine) {
+            currentId = id;
+            break;
           }
         }
 
-        const atPageBottom =
-          window.scrollY + window.innerHeight >=
-          document.documentElement.scrollHeight - 2;
-        if (atPageBottom && activeIds.length > 0) {
-          nextActive = activeIds[activeIds.length - 1];
+        // If not directly enclosing (e.g. between dividers), pick closest visible section
+        if (!currentId) {
+          let minDistance = Infinity;
+          for (const id of activeIds) {
+            const section = document.getElementById(id);
+            if (!section) continue;
+            const rect = section.getBoundingClientRect();
+            const dist = Math.abs(rect.top - focalLine);
+            if (dist < minDistance && rect.top <= windowHeight * 0.75) {
+              minDistance = dist;
+              currentId = id;
+            }
+          }
         }
 
-        setActive((current) =>
-          current === nextActive ? current : nextActive,
-        );
+        if (currentId) {
+          setActive((curr) => (curr === currentId ? curr : currentId));
+        }
       });
     };
 

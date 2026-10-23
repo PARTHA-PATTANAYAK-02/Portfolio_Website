@@ -1,153 +1,90 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import {
   motion as Motion,
   useMotionValue,
   useSpring,
   useTransform,
-  useMotionTemplate,
   useReducedMotion,
 } from "framer-motion";
+import { MapPin } from "lucide-react";
 
-const TILT = { stiffness: 170, damping: 22, mass: 0.7 };
-const SHIFT = { stiffness: 150, damping: 24 };
-const FLOAT = { duration: 3, repeat: Infinity, ease: "easeInOut" };
+const SPRING = { stiffness: 280, damping: 22, mass: 0.5 };
 
 export default function PhotoTilt({ src, alt = "Portrait" }) {
-  const ref = useRef(null);
+  const cardRef = useRef(null);
   const reduce = useReducedMotion();
-  const [hasFinePointer, setHasFinePointer] = useState(() =>
-    window.matchMedia("(min-width: 768px) and (hover: hover) and (pointer: fine)")
-      .matches,
-  );
-  const animateEffects = hasFinePointer && !reduce;
 
-  useEffect(() => {
-    const media = window.matchMedia(
-      "(min-width: 768px) and (hover: hover) and (pointer: fine)",
-    );
-    const updatePointer = (event) => setHasFinePointer(event.matches);
-    media.addEventListener("change", updatePointer);
-    return () => media.removeEventListener("change", updatePointer);
-  }, []);
+  // Normalized mouse coords (-0.5 to 0.5)
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
 
-  const mouseX = useMotionValue(0.5);
-  const mouseY = useMotionValue(0.5);
+  // Smooth springs for 3D rotation
+  const smoothX = useSpring(mouseX, SPRING);
+  const smoothY = useSpring(mouseY, SPRING);
 
-  // main 3D rotation
-  const rotateX = useSpring(useTransform(mouseY, [0, 1], [8, -8]), TILT);
-  const rotateY = useSpring(useTransform(mouseX, [0, 1], [-8, 8]), TILT);
+  // 3D Tilt: rotateX is driven by mouseY (inverted), rotateY by mouseX
+  const rotateX = useTransform(smoothY, [-0.5, 0.5], [10, -10]);
+  const rotateY = useTransform(smoothX, [-0.5, 0.5], [-10, 10]);
 
-  // parallax layers
-  const imageX = useSpring(useTransform(mouseX, [0, 1], [-7, 7]), SHIFT);
-  const imageY = useSpring(useTransform(mouseY, [0, 1], [-7, 7]), SHIFT);
-  const innerX = useSpring(useTransform(mouseX, [0, 1], [-3, 3]), SHIFT);
-  const innerY = useSpring(useTransform(mouseY, [0, 1], [-3, 3]), SHIFT);
+  // Holographic reflection coordinates
+  const glareX = useTransform(smoothX, [-0.5, 0.5], ["0%", "100%"]);
+  const glareY = useTransform(smoothY, [-0.5, 0.5], ["0%", "100%"]);
 
-  // cursor light (champagne + violet)
-  const lightX = useTransform(mouseX, (v) => `${v * 100}%`);
-  const lightY = useTransform(mouseY, (v) => `${v * 100}%`);
-  const cursorLight = useMotionTemplate`radial-gradient(circle 230px at ${lightX} ${lightY}, rgba(255,255,255,0.26), rgba(232,200,135,0.18) 25%, rgba(168,85,247,0.1) 45%, transparent 72%)`;
-
-  // holographic edge follows the pointer
-  const angle = useTransform(
-    [mouseX, mouseY],
-    ([x, y]) => `${x * 360 + y * 45}deg`,
-  );
-  const edgeLight = useMotionTemplate`linear-gradient(${angle}, rgba(168,85,247,0.85), rgba(232,200,135,0.75), rgba(217,70,239,0.7), rgba(168,85,247,0.85))`;
-
-  const handleMove = (e) => {
-    if (reduce || e.pointerType !== "mouse" || !ref.current) return;
-    const r = ref.current.getBoundingClientRect();
-    mouseX.set((e.clientX - r.left) / r.width);
-    mouseY.set((e.clientY - r.top) / r.height);
+  const handlePointerMove = (e) => {
+    if (reduce || e.pointerType !== "mouse" || !cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    mouseX.set(x);
+    mouseY.set(y);
   };
 
-  const reset = () => {
-    mouseX.set(0.5);
-    mouseY.set(0.5);
+  const handlePointerLeave = () => {
+    mouseX.set(0);
+    mouseY.set(0);
   };
 
   return (
     <div
-      className="relative flex h-full w-full items-center justify-center"
-      style={{ perspective: "1800px" }}
+      className="group relative flex h-full w-full items-center justify-center"
+      style={{ perspective: 1200 }}
     >
-      {/* ambient back glow */}
-      <Motion.div
-        animate={
-          animateEffects
-            ? { scale: [1, 1.12, 1], opacity: [0.25, 0.42, 0.25] }
-            : undefined
-        }
-        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-        className="pointer-events-none absolute h-[65%] w-[65%] rounded-full bg-primary/25 blur-[110px]"
+      {/* Ambient background glow (outside 3D plane for GPU efficiency) */}
+      <div
+        className="pointer-events-none absolute -inset-4 rounded-full bg-gradient-to-tr from-primary/30 via-fuchsia-500/25 to-cyan-500/20 blur-2xl opacity-60 transition-opacity duration-500 group-hover:opacity-95"
+        aria-hidden="true"
       />
 
-      {/* orbit 1 (violet) */}
+      {/* Main 3D Tilted Card */}
       <Motion.div
-        animate={animateEffects ? { rotate: 360 } : undefined}
-        transition={{ duration: 32, repeat: Infinity, ease: "linear" }}
-        className="pointer-events-none absolute h-[112%] w-[112%] rounded-full border border-primary/20"
-      >
-        <div className="absolute -top-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rounded-full bg-primary shadow-[0_0_22px_hsl(262_83%_58%)]" />
-      </Motion.div>
-
-      {/* orbit 2 (dashed, gold) */}
-      <Motion.div
-        animate={animateEffects ? { rotate: -360 } : undefined}
-        transition={{ duration: 45, repeat: Infinity, ease: "linear" }}
-        className="pointer-events-none absolute h-[101%] w-[101%] rounded-full border border-dashed border-amber-300/25"
-      >
-        <div className="absolute right-[9%] top-[15%] h-2 w-2 rounded-full bg-amber-300 shadow-[0_0_16px_rgba(252,211,77,.9)]" />
-      </Motion.div>
-
-      {/* main 3D world */}
-      <Motion.div
-        ref={ref}
-        onPointerMove={handleMove}
-        onPointerLeave={reset}
+        ref={cardRef}
+        onPointerMove={handlePointerMove}
+        onPointerLeave={handlePointerLeave}
         style={{
-          rotateX: animateEffects ? rotateX : 0,
-          rotateY: animateEffects ? rotateY : 0,
+          rotateX: reduce ? 0 : rotateX,
+          rotateY: reduce ? 0 : rotateY,
           transformStyle: "preserve-3d",
         }}
-        className="group relative h-[84%] w-[84%] cursor-pointer"
+        whileHover={{ scale: 1.025 }}
+        transition={{ duration: 0.3 }}
+        className="relative h-[88%] w-[88%] cursor-pointer rounded-[2rem] border border-primary/35 bg-card/80 p-2 shadow-2xl shadow-primary/15 transition-colors duration-300 group-hover:border-primary/65 group-hover:shadow-primary/30"
       >
-        {/* deep back plane */}
+        {/* Subtle decorative border gradient */}
         <div
-          style={{
-            transform: `translateZ(${hasFinePointer ? -70 : -24}px) rotateZ(${hasFinePointer ? -2 : 0}deg)`,
-          }}
-          className="absolute inset-[-18px] rounded-[2.4rem] border border-primary/10 bg-primary/[0.03] shadow-[0_45px_100px_rgba(0,0,0,.5)]"
+          className="pointer-events-none absolute inset-0 rounded-[inherit] bg-gradient-to-br from-primary/25 via-transparent to-fuchsia-500/25 opacity-50 transition-opacity group-hover:opacity-90"
+          style={{ transform: "translateZ(1px)" }}
         />
 
-        {/* holographic edge */}
-        <Motion.div
-          style={{ translateZ: hasFinePointer ? -30 : -10, background: edgeLight }}
-          className="absolute inset-[-7px] rounded-[2.1rem] opacity-60 blur-[1px] transition-opacity duration-500 group-hover:opacity-100"
-        />
-
-        {/* glass back panel */}
+        {/* Photo Container */}
         <div
-          style={{ transform: `translateZ(${hasFinePointer ? -10 : -4}px)` }}
-          className="absolute inset-[-2px] rounded-[2rem] border border-white/10 bg-black/20 backdrop-blur-sm"
-        />
-
-        {/* photo */}
-        <Motion.div
-          style={{
-            x: imageX,
-            y: imageY,
-            translateZ: hasFinePointer ? 35 : 12,
-            transformStyle: "preserve-3d",
-          }}
-          className="relative h-full w-full overflow-hidden rounded-[1.8rem] bg-black shadow-[0_35px_90px_rgba(0,0,0,.55)] ring-1 ring-white/10"
+          className="relative h-full w-full overflow-hidden rounded-[1.5rem] bg-black"
+          style={{ transform: "translateZ(10px)" }}
         >
           <img
             src={src}
             alt={alt}
             draggable="false"
-            className="h-full w-full select-none object-cover grayscale transition-all duration-700 ease-out md:group-hover:scale-[1.04] md:group-hover:grayscale-0"
+            className="h-full w-full select-none object-cover grayscale transition-all duration-700 ease-out group-hover:scale-105 group-hover:grayscale-0"
             onError={(e) => {
               e.currentTarget.style.display = "none";
               if (e.currentTarget.parentElement) {
@@ -157,108 +94,64 @@ export default function PhotoTilt({ src, alt = "Portrait" }) {
             }}
           />
 
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-black/20" />
+          {/* Vignette dark gradient for text readability */}
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
 
-          {/* cursor light */}
+          {/* Holographic light sheen following cursor */}
           <Motion.div
-            style={{ background: cursorLight }}
-            className="pointer-events-none absolute inset-0 opacity-0 mix-blend-screen transition-opacity duration-300 group-hover:opacity-100"
+            className="pointer-events-none absolute -inset-[50%] opacity-0 mix-blend-screen transition-opacity duration-300 group-hover:opacity-100"
+            style={{
+              background: "radial-gradient(circle 280px at center, rgba(255,255,255,0.28), rgba(168,85,247,0.18) 40%, transparent 70%)",
+              x: glareX,
+              y: glareY,
+              transform: "translateZ(15px)",
+            }}
           />
 
-          {/* hologram scan */}
-          {animateEffects && (
-            <Motion.div
-              animate={{ y: ["-120%", "120%"] }}
-              transition={{
-                duration: 4.5,
-                repeat: Infinity,
-                ease: "linear",
-                repeatDelay: 1.5,
-              }}
-              className="pointer-events-none absolute inset-x-0 top-0 h-1/4 bg-gradient-to-b from-transparent via-primary/10 to-transparent blur-md"
-            />
-          )}
+          {/* Tech HUD corner accents */}
+          <div
+            className="pointer-events-none absolute left-3 top-3 h-5 w-5 border-l-2 border-t-2 border-amber-300/70"
+            style={{ transform: "translateZ(20px)" }}
+          />
+          <div
+            className="pointer-events-none absolute bottom-3 right-3 h-5 w-5 border-b-2 border-r-2 border-amber-300/70"
+            style={{ transform: "translateZ(20px)" }}
+          />
 
-          {/* glass shine */}
-          {animateEffects && (
-            <Motion.div
-              animate={{ x: ["-150%", "150%"] }}
-              transition={{
-                duration: 4,
-                repeat: Infinity,
-                repeatDelay: 3,
-                ease: "easeInOut",
-              }}
-              className="pointer-events-none absolute top-[-20%] h-[140%] w-[22%] rotate-[18deg] bg-gradient-to-r from-transparent via-white/20 to-transparent blur-md"
-            />
-          )}
-
-          <div className="pointer-events-none absolute inset-0 rounded-[1.8rem] ring-1 ring-inset ring-white/15" />
-
-          {/* corner HUD */}
-          <div className="absolute left-5 top-5 h-6 w-6 border-l border-t border-amber-200/60" />
-          <div className="absolute bottom-5 right-5 h-6 w-6 border-b border-r border-amber-200/60" />
-
-          {/* caption */}
-          <Motion.div
-            style={{ x: innerX, y: innerY, translateZ: hasFinePointer ? 80 : 24 }}
-            className="absolute bottom-6 left-6"
+          {/* 3D Pop Badge: Open to work */}
+          <div
+            className="absolute right-3 top-3 pointer-events-none"
+            style={{ transform: "translateZ(32px)" }}
           >
-            <p className="font-mono text-[8px] uppercase tracking-[0.3em] text-white/60">
-              Partha Pattanayak
-            </p>
-            <p className="mt-1 text-xs font-semibold tracking-wide text-white">
-              Full Stack Developer
-            </p>
-          </Motion.div>
-        </Motion.div>
+            <div className="flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-black/75 px-3 py-1 text-[10px] font-mono font-medium text-emerald-300 shadow-xl">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+              </span>
+              <span>Open to work</span>
+            </div>
+          </div>
 
-        {/* floating status */}
-        <Motion.div
-          style={{ x: innerX, y: innerY, translateZ: hasFinePointer ? 130 : 32 }}
-          className="absolute -right-2 top-[9%] sm:-right-5"
-        >
-          <Motion.div
-            animate={animateEffects ? { y: [0, -8, 0] } : undefined}
-            transition={FLOAT}
-            className="rounded-full border border-emerald-400/30 bg-black/60 px-3 py-1.5 font-mono text-[9px] font-semibold uppercase tracking-[0.16em] text-emerald-300 shadow-[0_15px_35px_rgba(16,185,129,.2)] backdrop-blur-xl"
+          {/* 3D Pop Caption: Name & Title */}
+          <div
+            className="absolute bottom-4 left-4 right-4 flex items-end justify-between pointer-events-none"
+            style={{ transform: "translateZ(28px)" }}
           >
-            <span className="mr-1.5 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
-            Open to work
-          </Motion.div>
-        </Motion.div>
+            <div>
+              <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-white/70">
+                Partha Pattanayak
+              </p>
+              <h4 className="mt-0.5 text-sm font-bold tracking-tight text-white drop-shadow-md">
+                Full Stack Developer
+              </h4>
+            </div>
 
-        {/* floating location */}
-        <Motion.div
-          style={{ x: innerX, y: innerY, translateZ: hasFinePointer ? 105 : 22 }}
-          className="absolute -bottom-4 -left-2 sm:-left-5"
-        >
-          <Motion.div
-            animate={animateEffects ? { y: [0, 7, 0] } : undefined}
-            transition={{ ...FLOAT, duration: 3.7 }}
-            className="rounded-full border border-amber-300/30 bg-black/60 px-3 py-1.5 font-mono text-[9px] font-semibold uppercase tracking-[0.16em] text-amber-200 shadow-[0_15px_35px_rgba(252,211,77,.18)] backdrop-blur-xl"
-          >
-            Kolkata
-          </Motion.div>
-        </Motion.div>
-
-        {/* light nodes */}
-        <Motion.div
-          style={{ translateZ: hasFinePointer ? 150 : 30 }}
-          animate={
-            animateEffects
-              ? { scale: [1, 1.4, 1], opacity: [0.5, 1, 0.5] }
-              : undefined
-          }
-          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -left-3 top-[35%] h-2.5 w-2.5 rounded-full bg-primary shadow-[0_0_25px_hsl(262_83%_58%)]"
-        />
-        <Motion.div
-          style={{ translateZ: hasFinePointer ? 120 : 24 }}
-          animate={animateEffects ? { y: [0, -10, 0], x: [0, 4, 0] } : undefined}
-          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -right-2 bottom-[30%] h-1.5 w-1.5 rounded-full bg-amber-300 shadow-[0_0_18px_rgba(252,211,77,.9)]"
-        />
+            <div className="flex items-center gap-1 rounded-full border border-white/20 bg-black/65 px-2.5 py-1 text-[10px] font-mono text-white/90 shadow-lg">
+              <MapPin className="h-3 w-3 text-primary" />
+              <span>Kolkata</span>
+            </div>
+          </div>
+        </div>
       </Motion.div>
     </div>
   );
