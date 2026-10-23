@@ -9,13 +9,21 @@ export default function CertificateModal({ cert, onClose }) {
     if (!cert) return;
     const onKey = (e) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
-    const prevOverflow = document.body.style.overflow;
+
+    const prevBodyOverflow = document.body.style.overflow;
+    const prevHtmlOverflow = document.documentElement.style.overflow;
+
     document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
     document.body.classList.add("modal-open");
+    document.documentElement.classList.add("modal-open");
+
     return () => {
       window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prevOverflow;
+      document.body.style.overflow = prevBodyOverflow;
+      document.documentElement.style.overflow = prevHtmlOverflow;
       document.body.classList.remove("modal-open");
+      document.documentElement.classList.remove("modal-open");
     };
   }, [cert, onClose]);
 
@@ -35,10 +43,17 @@ export default function CertificateModal({ cert, onClose }) {
             transition={{ duration: 0.2 }}
             onClick={onClose}
             className="fixed inset-0 z-[90] bg-black/85"
+            style={{ touchAction: "none" }}
           />
 
           {/* Wrapper */}
-          <div className="fixed inset-0 z-[95] overflow-y-auto">
+          <div
+            className="fixed inset-0 z-[95] overflow-y-auto"
+            style={{
+              overscrollBehavior: "contain",
+              WebkitOverflowScrolling: "touch",
+            }}
+          >
             <div
               onClick={onClose}
               className="min-h-full flex items-start justify-center p-3 sm:p-6 lg:p-8"

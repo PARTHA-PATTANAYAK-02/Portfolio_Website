@@ -68,6 +68,12 @@
         transition: background-color 450ms ease, color 450ms ease;
     }
 
+    html.modal-open,
+    body.modal-open {
+        overflow: hidden !important;
+        overscroll-behavior: none !important;
+    }
+
     ::selection {
         background-color: hsl(262 83% 58% / 0.3);
     }

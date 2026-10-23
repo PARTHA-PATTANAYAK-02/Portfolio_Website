@@ -45,14 +45,21 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!routeReady || !minimumSplashElapsed) return undefined;
+    const hideSplash = () => {
+      const splash = document.getElementById("app-splash");
+      if (!splash) return;
+      splash.classList.add("is-hidden");
+      window.setTimeout(() => splash.remove(), 450);
+    };
 
-    const splash = document.getElementById("app-splash");
-    if (!splash) return undefined;
+    if (routeReady && minimumSplashElapsed) {
+      hideSplash();
+      return undefined;
+    }
 
-    splash.classList.add("is-hidden");
-    const removeTimer = window.setTimeout(() => splash.remove(), 450);
-    return () => window.clearTimeout(removeTimer);
+    // Safety fallback: guaranteed dismissal after 1.6s so user is never stuck
+    const fallbackTimer = window.setTimeout(hideSplash, 1600);
+    return () => window.clearTimeout(fallbackTimer);
   }, [routeReady, minimumSplashElapsed]);
 
   return (

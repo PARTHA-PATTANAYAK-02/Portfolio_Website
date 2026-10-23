@@ -148,17 +148,27 @@ function GlowCard({
   delay = 0,
 }) {
   const cardRef = useRef(null);
+  const rectRef = useRef(null);
   const reduce = useReducedMotion();
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
-  const smoothX = useSpring(mouseX, { stiffness: 260, damping: 24, mass: 0.5 });
-  const smoothY = useSpring(mouseY, { stiffness: 260, damping: 24, mass: 0.5 });
+  const smoothX = useSpring(mouseX, { stiffness: 280, damping: 25, mass: 0.45 });
+  const smoothY = useSpring(mouseY, { stiffness: 280, damping: 25, mass: 0.45 });
   const rotateX = useTransform(smoothY, [-0.5, 0.5], [5, -5]);
   const rotateY = useTransform(smoothX, [-0.5, 0.5], [-5, 5]);
 
+  const handlePointerEnter = (e) => {
+    if (reduce || e.pointerType !== "mouse") return;
+    rectRef.current = cardRef.current?.getBoundingClientRect();
+  };
+
   const handlePointerMove = (e) => {
-    if (reduce || e.pointerType !== "mouse" || !cardRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
+    if (reduce || e.pointerType !== "mouse") return;
+    if (!rectRef.current) {
+      rectRef.current = cardRef.current?.getBoundingClientRect();
+    }
+    const rect = rectRef.current;
+    if (!rect) return;
     const x = (e.clientX - rect.left) / rect.width - 0.5;
     const y = (e.clientY - rect.top) / rect.height - 0.5;
     mouseX.set(x);
@@ -168,6 +178,7 @@ function GlowCard({
   const handlePointerLeave = () => {
     mouseX.set(0);
     mouseY.set(0);
+    rectRef.current = null;
   };
 
   return (
@@ -177,6 +188,7 @@ function GlowCard({
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-40px" }}
       transition={{ duration: 0.5, delay, ease: [0.22, 1, 0.36, 1] }}
+      onPointerEnter={handlePointerEnter}
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
       style={{

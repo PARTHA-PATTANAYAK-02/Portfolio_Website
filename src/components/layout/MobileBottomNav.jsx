@@ -55,7 +55,7 @@ export default function MobileBottomNav() {
 
     if (navigator.vibrate && !reduce) navigator.vibrate(8);
 
-    const y = el.getBoundingClientRect().top + window.scrollY - 90;
+    const y = el.getBoundingClientRect().top + window.scrollY - 80;
 
     window.scrollTo({
       top: y,

@@ -97,6 +97,19 @@
         <span class="splash-loader" aria-hidden="true"></span>
       </div>
     </div>
+    <script>
+      (function() {
+        var dismiss = function() {
+          var s = document.getElementById("app-splash");
+          if (s && !s.classList.contains("is-hidden")) {
+            s.classList.add("is-hidden");
+            setTimeout(function() { s.remove(); }, 450);
+          }
+        };
+        setTimeout(dismiss, 1000);
+        window.addEventListener("load", function() { setTimeout(dismiss, 600); });
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

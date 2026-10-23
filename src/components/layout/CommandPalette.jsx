@@ -67,10 +67,26 @@ export default function CommandPalette() {
     };
   }, []);
 
+  const isMac =
+    typeof navigator !== "undefined" &&
+    /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+
   useEffect(() => {
     if (!open) return;
+    const prevBodyOverflow = document.body.style.overflow;
+    const prevHtmlOverflow = document.documentElement.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
     document.body.classList.add("modal-open");
-    return () => document.body.classList.remove("modal-open");
+    document.documentElement.classList.add("modal-open");
+
+    return () => {
+      document.body.style.overflow = prevBodyOverflow;
+      document.documentElement.style.overflow = prevHtmlOverflow;
+      document.body.classList.remove("modal-open");
+      document.documentElement.classList.remove("modal-open");
+    };
   }, [open]);
 
   const filtered = COMMANDS.filter((c) => {
@@ -85,7 +101,7 @@ export default function CommandPalette() {
     setOpen(false);
     const el = document.getElementById(id);
     if (!el) return;
-    const y = el.getBoundingClientRect().top + window.scrollY - 90;
+    const y = el.getBoundingClientRect().top + window.scrollY - 80;
     window.scrollTo({ top: y, behavior: "smooth" });
   };
 
@@ -154,7 +170,7 @@ export default function CommandPalette() {
 
               <div className="flex items-center justify-between border-t border-border/80 px-4 py-2.5 font-mono text-[10px] text-muted-foreground">
                 <span>↑↓ navigate · ↵ select</span>
-                <span>ESC close</span>
+                <span>{isMac ? "⌘K" : "Ctrl+K"} · ESC close</span>
               </div>
             </div>
           </Motion.div>

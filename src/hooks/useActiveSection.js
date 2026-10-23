@@ -4,75 +4,88 @@ export function useActiveSection(activeIds) {
   const [active, setActive] = useState(activeIds[0] ?? "home");
 
   useEffect(() => {
-    let frame = null;
+    if (!activeIds || activeIds.length === 0) return;
 
-    const updateActiveSection = () => {
-      if (frame !== null) return;
+    const visibleMap = new Map();
 
-      frame = window.requestAnimationFrame(() => {
-        frame = null;
-
-        const scrollY = window.scrollY;
-        const windowHeight = window.innerHeight;
-        const docHeight = document.documentElement.scrollHeight;
-
-        // At very top of page
-        if (scrollY < 120) {
-          setActive(activeIds[0] ?? "home");
-          return;
-        }
-
-        // At very bottom of page
-        if (scrollY + windowHeight >= docHeight - 80 && activeIds.length > 0) {
-          setActive(activeIds[activeIds.length - 1]);
-          return;
-        }
-
-        // Focal line is ~36% from the top of the viewport (just below header)
-        const focalLine = windowHeight * 0.36;
-        let currentId = null;
-
-        for (const id of activeIds) {
-          const section = document.getElementById(id);
-          if (!section) continue;
-
-          const rect = section.getBoundingClientRect();
-          // Check if this section encloses the focal line
-          if (rect.top <= focalLine && rect.bottom >= focalLine) {
-            currentId = id;
-            break;
-          }
-        }
-
-        // If not directly enclosing (e.g. between dividers), pick closest visible section
-        if (!currentId) {
-          let minDistance = Infinity;
-          for (const id of activeIds) {
-            const section = document.getElementById(id);
-            if (!section) continue;
-            const rect = section.getBoundingClientRect();
-            const dist = Math.abs(rect.top - focalLine);
-            if (dist < minDistance && rect.top <= windowHeight * 0.75) {
-              minDistance = dist;
-              currentId = id;
-            }
-          }
-        }
-
-        if (currentId) {
-          setActive((curr) => (curr === currentId ? curr : currentId));
-        }
-      });
+    const handleScrollEdge = () => {
+      const scrollY = window.scrollY;
+      if (scrollY < 120) {
+        setActive((curr) => (curr === activeIds[0] ? curr : activeIds[0]));
+        return;
+      }
+      if (
+        window.innerHeight + scrollY >=
+        document.documentElement.scrollHeight - 80
+      ) {
+        const lastId = activeIds[activeIds.length - 1];
+        setActive((curr) => (curr === lastId ? curr : lastId));
+      }
     };
 
-    updateActiveSection();
-    window.addEventListener("scroll", updateActiveSection, { passive: true });
-    window.addEventListener("resize", updateActiveSection);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          visibleMap.set(entry.target.id, entry.intersectionRatio);
+        });
+
+        const scrollY = window.scrollY;
+        if (scrollY < 120) {
+          setActive((curr) => (curr === activeIds[0] ? curr : activeIds[0]));
+          return;
+        }
+        if (
+          window.innerHeight + scrollY >=
+          document.documentElement.scrollHeight - 80
+        ) {
+          const lastId = activeIds[activeIds.length - 1];
+          setActive((curr) => (curr === lastId ? curr : lastId));
+          return;
+        }
+
+        let bestId = null;
+        let bestRatio = 0;
+        for (const id of activeIds) {
+          const ratio = visibleMap.get(id) || 0;
+          if (ratio > bestRatio) {
+            bestRatio = ratio;
+            bestId = id;
+          }
+        }
+        if (bestId && bestRatio > 0.05) {
+          setActive((curr) => (curr === bestId ? curr : bestId));
+        }
+      },
+      {
+        rootMargin: "-15% 0px -45% 0px",
+        threshold: [0, 0.1, 0.25, 0.5, 0.75, 1],
+      },
+    );
+
+    let retryTimer = null;
+    const attachObservers = () => {
+      let count = 0;
+      activeIds.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) {
+          observer.observe(el);
+          count++;
+        }
+      });
+      return count;
+    };
+
+    if (attachObservers() < activeIds.length) {
+      retryTimer = setTimeout(attachObservers, 400);
+    }
+
+    handleScrollEdge();
+    window.addEventListener("scroll", handleScrollEdge, { passive: true });
 
     return () => {
-      window.removeEventListener("scroll", updateActiveSection);
-      window.removeEventListener("resize", updateActiveSection);
-      if (frame !== null) window.cancelAnimationFrame(frame);
+      if (retryTimer) clearTimeout(retryTimer);
+      observer.disconnect();
+      window.removeEventListener("scroll", handleScrollEdge);
     };
   }, [activeIds]);
 

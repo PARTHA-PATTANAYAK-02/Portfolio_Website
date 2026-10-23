@@ -29,10 +29,20 @@ export default function PhotoTilt({ src, alt = "Portrait" }) {
   // Holographic reflection coordinates
   const glareX = useTransform(smoothX, [-0.5, 0.5], ["0%", "100%"]);
   const glareY = useTransform(smoothY, [-0.5, 0.5], ["0%", "100%"]);
+  const rectRef = useRef(null);
+
+  const handlePointerEnter = (e) => {
+    if (reduce || e.pointerType !== "mouse") return;
+    rectRef.current = cardRef.current?.getBoundingClientRect();
+  };
 
   const handlePointerMove = (e) => {
-    if (reduce || e.pointerType !== "mouse" || !cardRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
+    if (reduce || e.pointerType !== "mouse") return;
+    if (!rectRef.current) {
+      rectRef.current = cardRef.current?.getBoundingClientRect();
+    }
+    const rect = rectRef.current;
+    if (!rect) return;
     const x = (e.clientX - rect.left) / rect.width - 0.5;
     const y = (e.clientY - rect.top) / rect.height - 0.5;
     mouseX.set(x);
@@ -42,6 +52,7 @@ export default function PhotoTilt({ src, alt = "Portrait" }) {
   const handlePointerLeave = () => {
     mouseX.set(0);
     mouseY.set(0);
+    rectRef.current = null;
   };
 
   return (
@@ -58,6 +69,7 @@ export default function PhotoTilt({ src, alt = "Portrait" }) {
       {/* Main 3D Tilted Card */}
       <Motion.div
         ref={cardRef}
+        onPointerEnter={handlePointerEnter}
         onPointerMove={handlePointerMove}
         onPointerLeave={handlePointerLeave}
         style={{

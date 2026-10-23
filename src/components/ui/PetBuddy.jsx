@@ -1802,14 +1802,20 @@ export default function PetBuddy() {
         document.hidden ||
         document.body.classList.contains("modal-open") ||
         scrolling
-      )
+      ) {
         return;
-      raf = requestAnimationFrame(loop);
+      }
 
-      // The pet is decorative, so 30fps is enough and leaves more GPU time
-      // for the page itself.
-      if (now - lastRender < 1000 / 30) return;
+      const isSleepingOrLoaf =
+        S.current?.action === "sleeping" || S.current?.action === "loaf";
+      const targetFps = isSleepingOrLoaf && !flags.current?.landing ? 15 : 30;
+
+      if (now - lastRender < 1000 / targetFps) {
+        raf = requestAnimationFrame(loop);
+        return;
+      }
       lastRender = now;
+      raf = requestAnimationFrame(loop);
 
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
@@ -1838,8 +1844,7 @@ export default function PetBuddy() {
         raf = null;
         return;
       }
-      if (raf !== null)
-        return;
+      if (raf !== null) return;
       last = performance.now();
       raf = requestAnimationFrame(loop);
     };
@@ -2007,9 +2012,10 @@ export default function PetBuddy() {
       const now = performance.now();
       lastPointer.current = Date.now();
       if (!buddyRef.current || flags.current.sleeping) return;
-      const r = buddyRef.current.getBoundingClientRect();
-      const dx = e.clientX - (r.left + r.width / 2);
-      const dy = e.clientY - (r.top + r.height / 2);
+      const catCenterX = tx.get() + (W * sc.current) / 2;
+      const catCenterY = ty.get() + (H * sc.current) / 2;
+      const dx = e.clientX - catCenterX;
+      const dy = e.clientY - catCenterY;
       const dist = Math.hypot(dx, dy) || 1;
       const k = Math.min(1, dist / 260);
       lookX.set((dx / dist) * k);
@@ -2940,6 +2946,9 @@ export default function PetBuddy() {
               transform: "translateX(-50%)",
               marginBottom: 46,
               pointerEvents: "none",
+              display: "flex",
+              justifyContent: "center",
+              width: "max-content",
             }}
           >
             <AnimatePresence>
@@ -2952,19 +2961,22 @@ export default function PetBuddy() {
                   transition={{ type: "spring", stiffness: 500, damping: 26 }}
                   style={{
                     position: "relative",
-                    padding: "7px 14px",
+                    padding: "8px 16px",
                     borderRadius: 18,
                     fontSize: 13,
                     fontWeight: 700,
+                    width: "max-content",
+                    minWidth: 120,
+                    maxWidth: 240,
                     whiteSpace: "normal",
                     textAlign: "center",
                     background: UIt.bg,
                     color: UIt.text,
                     border: `1px solid ${UIt.border}`,
                     boxShadow: "0 10px 28px rgba(0,0,0,.28)",
-                    maxWidth: "min(300px, calc(100vw - 28px))",
                     lineHeight: 1.4,
-                    overflowWrap: "anywhere",
+                    overflowWrap: "break-word",
+                    wordBreak: "break-word",
                   }}
                 >
                   {message}
