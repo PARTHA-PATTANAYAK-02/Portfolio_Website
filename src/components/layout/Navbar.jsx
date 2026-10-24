@@ -288,11 +288,11 @@ function Brand3D({ onClick, reduce }) {
 function MagneticNavItem({ item, active, onClick, reduce }) {
   const ref = useRef(null);
   const rectRef = useRef(null);
-  const mx = useSpring(0, { stiffness: 350, damping: 24, mass: 0.45 });
-  const my = useSpring(0, { stiffness: 350, damping: 24, mass: 0.45 });
-  const rx = useSpring(0, { stiffness: 300, damping: 24 });
-  const ry = useSpring(0, { stiffness: 300, damping: 24 });
-  const z = useSpring(0, { stiffness: 320, damping: 24 });
+  const mx = useSpring(0, { stiffness: 360, damping: 26, mass: 0.4 });
+  const my = useSpring(0, { stiffness: 360, damping: 26, mass: 0.4 });
+  const rx = useTransform(my, [-8, 8], [9, -9]);
+  const ry = useTransform(mx, [-10, 10], [-12, 12]);
+  const z = useTransform(mx, [-10, 0, 10], [10, 16, 10]);
 
   const onPointerEnter = (event) => {
     if (reduce || event.pointerType !== "mouse") return;
@@ -310,17 +310,11 @@ function MagneticNavItem({ item, active, onClick, reduce }) {
     const py = (event.clientY - (r.top + r.height / 2)) / r.height;
     mx.set(px * 10);
     my.set(py * 7);
-    ry.set(px * 13);
-    rx.set(-py * 10);
-    z.set(16);
   };
 
   const reset = () => {
     mx.set(0);
     my.set(0);
-    rx.set(0);
-    ry.set(0);
-    z.set(0);
     rectRef.current = null;
   };
 
@@ -426,7 +420,7 @@ function ParticleField({ reduce }) {
 
 const styles = `
 .partha-nav-shell{position:fixed;top:0;left:0;right:0;z-index:60;padding:14px 14px 0;perspective:1400px;}
-.partha-nav{position:relative;width:100%;height:78px;border-radius:28px;overflow:hidden;background:rgba(222,225,255,.52);border:1px solid rgba(124,58,237,.22);box-shadow:0 28px 80px -35px rgba(76,29,149,.48),inset 0 1px 0 rgba(255,255,255,.95);backdrop-filter:blur(24px) saturate(150%);transition:height .35s ease,border-radius .35s ease,background .35s ease,box-shadow .35s ease;}
+.partha-nav{position:relative;width:100%;height:78px;border-radius:28px;overflow:hidden;background:rgba(222,225,255,.52);border:1px solid rgba(124,58,237,.22);box-shadow:0 28px 80px -35px rgba(76,29,149,.48),inset 0 1px 0 rgba(255,255,255,.95);backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%);transition:height .35s ease,border-radius .35s ease,background .35s ease,box-shadow .35s ease;}
 .partha-nav.is-dark{background:linear-gradient(180deg,rgba(15,11,35,.78),rgba(10,8,25,.66));border-color:rgba(167,139,250,.22);box-shadow:0 30px 90px -40px rgba(109,40,217,.7),inset 0 1px 0 rgba(255,255,255,.08);}
 .partha-nav.is-light{color:hsl(222 47% 11%);}
 .partha-nav.is-dark{color:hsl(210 40% 98%);}

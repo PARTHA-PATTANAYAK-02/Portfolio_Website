@@ -61,6 +61,7 @@ const DotField = memo(
       const ctx = canvas.getContext("2d", { alpha: true });
       const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
       let resizeTimer;
+      let cachedGrad = null;
 
       function resize() {
         clearTimeout(resizeTimer);
@@ -68,6 +69,7 @@ const DotField = memo(
       }
 
       function doResize() {
+        cachedGrad = null;
         const rect = canvas.parentElement.getBoundingClientRect();
         const w = rect.width;
         const h = rect.height;
@@ -178,10 +180,12 @@ const DotField = memo(
 
         ctx.clearRect(0, 0, w, h);
 
-        const grad = ctx.createLinearGradient(0, 0, w, h);
-        grad.addColorStop(0, p.gradientFrom);
-        grad.addColorStop(1, p.gradientTo);
-        ctx.fillStyle = grad;
+        if (!cachedGrad) {
+          cachedGrad = ctx.createLinearGradient(0, 0, w, h);
+          cachedGrad.addColorStop(0, p.gradientFrom);
+          cachedGrad.addColorStop(1, p.gradientTo);
+        }
+        ctx.fillStyle = cachedGrad;
 
         const cr = p.cursorRadius;
         const crSq = cr * cr;
@@ -211,8 +215,13 @@ const DotField = memo(
               d.vy += Math.sin(angle) * -move;
             }
           } else if (isBulge) {
-            d.sx += (d.ax - d.sx) * 0.1;
-            d.sy += (d.ay - d.sy) * 0.1;
+            if (Math.abs(d.sx - d.ax) > 0.05 || Math.abs(d.sy - d.ay) > 0.05) {
+              d.sx += (d.ax - d.sx) * 0.12;
+              d.sy += (d.ay - d.sy) * 0.12;
+            } else {
+              d.sx = d.ax;
+              d.sy = d.ay;
+            }
           }
 
           if (!isBulge) {
