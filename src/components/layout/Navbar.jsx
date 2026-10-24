@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  AnimatePresence,
   motion as Motion,
   useMotionValue,
   useSpring,
@@ -35,7 +36,7 @@ const NAV_ITEMS = [
 const NAV_ACTIVE_IDS = NAV_ITEMS.map((item) => item.id);
 
 const SPRING = { stiffness: 360, damping: 24, mass: 0.55 };
-const NAV_OFFSET = 80; // Exactly matches scroll-mt-20 (5rem = 80px)
+const NAV_OFFSET = 80;
 
 export default function Navbar() {
   const { theme, toggleTheme } = useTheme();
@@ -48,6 +49,17 @@ export default function Navbar() {
   );
   const [scrolled, setScrolled] = useState(false);
   const [active, setActive] = useActiveSection(NAV_ACTIVE_IDS);
+
+  const rootRef = useRef(null);
+  const rootRectRef = useRef(null);
+  const cursorX = useMotionValue(0.5);
+  const cursorY = useMotionValue(0.5);
+  const smoothX = useSpring(cursorX, { stiffness: 180, damping: 24 });
+  const smoothY = useSpring(cursorY, { stiffness: 180, damping: 24 });
+
+  // Elegant ambient 3D depth from original design
+  const ambientX = useTransform(smoothX, [0, 1], [-8, 8]);
+  const ambientY = useTransform(smoothY, [0, 1], [-4, 4]);
 
   const isMac = useMemo(
     () =>
@@ -81,10 +93,38 @@ export default function Navbar() {
   const openPalette = () =>
     window.dispatchEvent(new CustomEvent("open-command-palette"));
 
+  const onPointerEnter = (event) => {
+    if (reduce || event.pointerType !== "mouse") return;
+    rootRectRef.current = rootRef.current?.getBoundingClientRect();
+  };
+
+  const onPointerMove = (event) => {
+    if (reduce || event.pointerType !== "mouse") return;
+    if (!rootRectRef.current) {
+      rootRectRef.current = rootRef.current?.getBoundingClientRect();
+    }
+    const rect = rootRectRef.current;
+    if (!rect) return;
+    cursorX.set((event.clientX - rect.left) / rect.width);
+    cursorY.set((event.clientY - rect.top) / rect.height);
+  };
+
+  const onPointerLeave = () => {
+    cursorX.set(0.5);
+    cursorY.set(0.5);
+    rootRectRef.current = null;
+  };
+
   return (
     <>
       <style>{styles}</style>
-      <header className="partha-nav-shell">
+      <header
+        className="partha-nav-shell"
+        ref={rootRef}
+        onPointerEnter={onPointerEnter}
+        onPointerMove={onPointerMove}
+        onPointerLeave={onPointerLeave}
+      >
         <div
           className={`partha-nav ${isDark ? "is-dark" : "is-light"} ${scrolled ? "is-scrolled" : ""}`}
         >
@@ -92,7 +132,11 @@ export default function Navbar() {
           <div className="nav-ribbon-glow" aria-hidden="true" />
           <ParticleField reduce={reduce || isMobile} />
 
-          <div className="nav-content">
+          <Motion.div
+            className="nav-content"
+            style={{ x: reduce ? 0 : ambientX, y: reduce ? 0 : ambientY }}
+            transition={{ type: "spring", ...SPRING }}
+          >
             <Brand3D
               onClick={() => scrollTo("home")}
               reduce={reduce || isMobile}
@@ -111,7 +155,7 @@ export default function Navbar() {
               ))}
             </nav>
 
-            {/* Actions: Search, Theme Toggle, Let's talk */}
+            {/* Actions: Search, Animated Theme Toggle, Let's talk */}
             <div className="nav-actions">
               <MagneticButton
                 onClick={openPalette}
@@ -125,16 +169,27 @@ export default function Navbar() {
               </MagneticButton>
 
               <MagneticButton
-                onClick={toggleTheme}
+                onClick={(e) => toggleTheme(e)}
                 reduce={reduce || isMobile}
                 className="theme-btn"
                 ariaLabel={`Switch to ${isDark ? "light" : "dark"} mode`}
               >
-                {isDark ? (
-                  <Sun size={17} className="text-amber-400" />
-                ) : (
-                  <Moon size={17} className="text-violet-600" />
-                )}
+                <AnimatePresence mode="wait" initial={false}>
+                  <Motion.div
+                    key={isDark ? "dark" : "light"}
+                    initial={{ rotate: -90, scale: 0.4, opacity: 0 }}
+                    animate={{ rotate: 0, scale: 1, opacity: 1 }}
+                    exit={{ rotate: 90, scale: 0.4, opacity: 0 }}
+                    transition={{ duration: 0.25, ease: "easeOut" }}
+                    className="flex items-center justify-center"
+                  >
+                    {isDark ? (
+                      <Sun size={17} className="text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.65)]" />
+                    ) : (
+                      <Moon size={17} className="text-violet-600 drop-shadow-[0_0_8px_rgba(124,58,237,0.5)]" />
+                    )}
+                  </Motion.div>
+                </AnimatePresence>
               </MagneticButton>
 
               <MagneticButton
@@ -148,7 +203,7 @@ export default function Navbar() {
                 <ArrowUpRight size={15} />
               </MagneticButton>
             </div>
-          </div>
+          </Motion.div>
         </div>
       </header>
     </>
@@ -158,10 +213,10 @@ export default function Navbar() {
 function Brand3D({ onClick, reduce }) {
   const ref = useRef(null);
   const rectRef = useRef(null);
-  const rx = useSpring(0, { stiffness: 210, damping: 20 });
-  const ry = useSpring(0, { stiffness: 210, damping: 20 });
-  const x = useSpring(0, { stiffness: 230, damping: 22 });
-  const y = useSpring(0, { stiffness: 230, damping: 22 });
+  const rx = useSpring(0, { stiffness: 220, damping: 20 });
+  const ry = useSpring(0, { stiffness: 220, damping: 20 });
+  const x = useSpring(0, { stiffness: 240, damping: 22 });
+  const y = useSpring(0, { stiffness: 240, damping: 22 });
 
   const onPointerEnter = (event) => {
     if (reduce || event.pointerType !== "mouse") return;
@@ -233,8 +288,11 @@ function Brand3D({ onClick, reduce }) {
 function MagneticNavItem({ item, active, onClick, reduce }) {
   const ref = useRef(null);
   const rectRef = useRef(null);
-  const mx = useSpring(0, { stiffness: 380, damping: 26, mass: 0.4 });
-  const my = useSpring(0, { stiffness: 380, damping: 26, mass: 0.4 });
+  const mx = useSpring(0, { stiffness: 350, damping: 24, mass: 0.45 });
+  const my = useSpring(0, { stiffness: 350, damping: 24, mass: 0.45 });
+  const rx = useSpring(0, { stiffness: 300, damping: 24 });
+  const ry = useSpring(0, { stiffness: 300, damping: 24 });
+  const z = useSpring(0, { stiffness: 320, damping: 24 });
 
   const onPointerEnter = (event) => {
     if (reduce || event.pointerType !== "mouse") return;
@@ -250,13 +308,19 @@ function MagneticNavItem({ item, active, onClick, reduce }) {
     if (!r) return;
     const px = (event.clientX - (r.left + r.width / 2)) / r.width;
     const py = (event.clientY - (r.top + r.height / 2)) / r.height;
-    mx.set(px * 8);
-    my.set(py * 5);
+    mx.set(px * 10);
+    my.set(py * 7);
+    ry.set(px * 13);
+    rx.set(-py * 10);
+    z.set(16);
   };
 
   const reset = () => {
     mx.set(0);
     my.set(0);
+    rx.set(0);
+    ry.set(0);
+    z.set(0);
     rectRef.current = null;
   };
 
@@ -271,7 +335,7 @@ function MagneticNavItem({ item, active, onClick, reduce }) {
       onPointerEnter={onPointerEnter}
       onPointerMove={move}
       onPointerLeave={reset}
-      style={{ x: mx, y: my }}
+      style={{ x: mx, y: my, rotateX: rx, rotateY: ry, z }}
       whileTap={{ scale: 0.94 }}
     >
       <span className="nav-item-surface" />
@@ -291,8 +355,8 @@ function MagneticButton({
   className = "",
   ariaLabel,
 }) {
-  const x = useSpring(0, { stiffness: 340, damping: 22 });
-  const y = useSpring(0, { stiffness: 340, damping: 22 });
+  const x = useSpring(0, { stiffness: 350, damping: 24 });
+  const y = useSpring(0, { stiffness: 350, damping: 24 });
   const ref = useRef(null);
   const rectRef = useRef(null);
 
@@ -342,7 +406,7 @@ function ParticleField({ reduce }) {
   if (reduce) return null;
   return (
     <div className="particle-field" aria-hidden="true">
-      {Array.from({ length: 14 }, (_, i) => (
+      {Array.from({ length: 16 }, (_, i) => (
         <span
           key={i}
           className="particle-dot"
@@ -351,8 +415,8 @@ function ParticleField({ reduce }) {
             top: `${(i * 53 + 12) % 80}%`,
             width: `${2 + (i % 3)}px`,
             height: `${2 + (i % 3)}px`,
-            animationDelay: `${i * 0.28}s`,
-            animationDuration: `${3.6 + (i % 3)}s`,
+            animationDelay: `${i * 0.22}s`,
+            animationDuration: `${3.5 + (i % 4)}s`,
           }}
         />
       ))}
@@ -361,7 +425,7 @@ function ParticleField({ reduce }) {
 }
 
 const styles = `
-.partha-nav-shell{position:fixed;top:0;left:0;right:0;z-index:60;padding:14px 14px 0;}
+.partha-nav-shell{position:fixed;top:0;left:0;right:0;z-index:60;padding:14px 14px 0;perspective:1400px;}
 .partha-nav{position:relative;width:100%;height:78px;border-radius:28px;overflow:hidden;background:rgba(222,225,255,.52);border:1px solid rgba(124,58,237,.22);box-shadow:0 28px 80px -35px rgba(76,29,149,.48),inset 0 1px 0 rgba(255,255,255,.95);backdrop-filter:blur(24px) saturate(150%);transition:height .35s ease,border-radius .35s ease,background .35s ease,box-shadow .35s ease;}
 .partha-nav.is-dark{background:linear-gradient(180deg,rgba(15,11,35,.78),rgba(10,8,25,.66));border-color:rgba(167,139,250,.22);box-shadow:0 30px 90px -40px rgba(109,40,217,.7),inset 0 1px 0 rgba(255,255,255,.08);}
 .partha-nav.is-light{color:hsl(222 47% 11%);}
@@ -370,14 +434,14 @@ const styles = `
 .nav-liquid-border{position:absolute;inset:0;padding:1px;border-radius:inherit;background:linear-gradient(100deg,rgba(139,92,246,.15),rgba(124,58,237,.85),rgba(59,130,246,.65),rgba(217,70,239,.75),rgba(139,92,246,.15));background-size:260% 100%;animation:borderFlow 7s ease-in-out infinite;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;pointer-events:none;}
 @keyframes borderFlow{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
 .nav-ribbon-glow{position:absolute;width:48%;height:120px;left:26%;top:-60px;border-radius:50%;background:radial-gradient(circle,rgba(124,58,237,.34),rgba(59,130,246,.12) 42%,transparent 72%);filter:blur(18px);pointer-events:none;}
-.nav-content{height:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 20px;position:relative;z-index:2;}
+.nav-content{height:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 20px;position:relative;z-index:2;transform-style:preserve-3d;}
 .particle-field{position:absolute;inset:0;pointer-events:none;overflow:hidden;opacity:.9;}
-.particle-dot{position:absolute;border-radius:50%;background:hsl(262 83% 70%);box-shadow:0 0 8px hsl(262 83% 65%);animation:particleFloat 4s ease-in-out infinite;will-change:transform,opacity;pointer-events:none;}
+.particle-dot{position:absolute;border-radius:50%;background:hsl(262 83% 70%);box-shadow:0 0 10px hsl(262 83% 65%);animation:particleFloat 4s ease-in-out infinite;will-change:transform,opacity;pointer-events:none;}
 @keyframes particleFloat{0%,100%{transform:translate3d(0,0,0);opacity:.25;}50%{transform:translate3d(3px,-8px,0);opacity:.85;}}
 .brand-3d{position:relative;display:flex;align-items:center;gap:11px;flex:0 0 auto;border:0;background:transparent;padding:0 10px 0 0;cursor:pointer;transform-style:preserve-3d;user-select:none;}
 .brand-core{position:relative;width:54px;height:54px;display:grid;place-items:center;transform-style:preserve-3d;}
 .brand-aura{position:absolute;width:62px;height:62px;border-radius:50%;background:radial-gradient(circle,rgba(124,58,237,.34),transparent 68%);filter:blur(5px);}
-.brand-orbit{position:absolute;border:1px solid rgba(167,139,250,.52);border-radius:50%;pointer-events:none;}
+.brand-orbit{position:absolute;border:1px solid rgba(167,139,250,.52);border-radius:50%;pointer-events:none;transform-style:preserve-3d;}
 .orbit-one{width:61px;height:25px;transform:rotateX(66deg) rotateZ(20deg);}
 .orbit-two{width:52px;height:20px;transform:rotateX(68deg) rotateY(55deg);border-color:rgba(96,165,250,.48);}
 .brand-core:before{content:"";position:absolute;inset:5px;border-radius:16px;background:linear-gradient(145deg,rgba(255,255,255,.22),rgba(124,58,237,.18));border:1px solid rgba(167,139,250,.28);box-shadow:inset 0 1px 1px rgba(255,255,255,.2),0 12px 30px -14px rgba(124,58,237,.9);transform:translateZ(0);}
